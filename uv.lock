@@ -4,4 +4,4 @@ requires-python = ">=3.8"
 [[package]]
 name = "hf-rocm-kernels"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }

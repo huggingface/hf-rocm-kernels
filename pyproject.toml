@@ -21,6 +21,30 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
+dependencies = [
+    "amdsmi>=6.2.0",
+    "numpy<2.0.0",
+    "torch>=2.5.0",
+    "pytorch-triton-rocm>=3.0.0",
+]
+
+[build-system]
+requires = [
+    "cmake>=3.26",
+    "numpy<2.0.0",
+    "setuptools>=61",
+    "torch>=2.5.0",
+    "pytorch-triton-rocm>=3.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "clang-format>=19.0.0",
+    "pytest>=8.3.3",
+    "ruff>=0.8.0",
+    "matplotlib>=3.7.0",
+]
+
 [tool.uv.sources]
 torch = { index = "pytorch-rocm" }
 torchvision = { index = "pytorch-rocm" }
