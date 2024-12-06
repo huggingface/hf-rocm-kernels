@@ -21,6 +21,10 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     // Increment operator
     ops.def("increment(Tensor! x) -> ()");
     ops.impl("increment", torch::kCUDA, &increment);
+
+    // Residual + RMS operator
+    ops.def("residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor! output, float epsilon, float scale, int mode, int num_threads) -> ()");
+    ops.impl("residual_rms", torch::kCUDA, &residual_rms);
 }
 
 REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
