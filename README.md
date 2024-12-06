@@ -27,7 +27,7 @@ pip install uv
 uv sync
 ```
 
-## Adding a new operation
+## Adding a new operator
 
 ### Writing the source files
 
