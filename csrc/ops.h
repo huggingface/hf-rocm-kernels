@@ -4,3 +4,5 @@
 #include <torch/library.h>
 
 #include <vector>
+
+void increment(torch::Tensor& x);

@@ -160,9 +160,11 @@ message(STATUS "FetchContent base directory: ${FETCHCONTENT_BASE_DIR}")
 # _C extension
 #
 
-# [This is an accumulation point]
+# This is the list of operator files to build.
 set(KERNEL_SRC
-  "csrc/torch_bindings.cpp")
+  "csrc/torch_bindings.cpp"
+  "csrc/op_src/increment/increment_op.cu"
+)
 
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(

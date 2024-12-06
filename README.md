@@ -26,3 +26,67 @@ You can find a list of supported architectures [here](https://rocm.docs.amd.com/
 pip install uv
 uv sync
 ```
+
+## Adding a new operator
+
+### Writing the source files
+
+Imagine we want to add a simple increment operator. We first create the `increment` directory in `csrc/op_src`. This directory should contains the source files for our operator, which in our case is a file named `increment_op.cu` containing:
+
+```
+#include <torch/all.h>
+
+void increment(torch::Tensor& x) {
+    x += 1;
+}
+```
+
+### Adding to CMake
+
+We add this file to the list of files CMake builds, located in `CMakeLists.txt`. You can look for the line `# This is the list of operator files to build.` and add the operator source file:
+
+```
+# This is the list of operator files to build.
+set(KERNEL_SRC
+  "csrc/torch_bindings.cpp"
+  "csrc/op_src/increment/increment_op.cu"
+)
+```
+
+### Binding python and C
+
+We need to create the binding to our C operator in python. We first declare our operator in `csrc/ops.h` (*), so we had this line at the end of the file:
+
+```
+void increment(torch::Tensor& x);
+```
+
+Then, we create a torch binding in C++ by adding the operator in the `csrc/torch_bindings.cpp` file. Inside the `TORCH_LIBRARY_EXPAND` scope, we add the lines:
+
+```
+// Increment operator
+ops.def("increment(Tensor! x) -> ()");
+ops.impl("increment", torch::kCUDA, &increment);
+```
+
+Notice the `!` after the `Tensor` type: this means that the tensor `x` is modified by the operator we just declared. When passing a tensor that is not modified by the operator, you can drop the `!`.
+
+Finaly, we add the python-side of the binding. We create the directory `increment` in `hf_rocm_kernels/operators` and in it the file `binding.py` containing:
+
+```
+import torch
+
+import hf_rocm_kernels._C
+
+
+def _increment(x: torch.Tensor) -> None:
+    torch.ops._C.increment(x)
+```
+
+Ideally, we then create a user-friendly version of the operator with checks (eg. assert tensors are on device and in the right layout) and documentation, as was done in `hf_rocm_kernels/increment/wrapped.py`. That version should be the one exposed in `hf_rocm_kernels/__init__.py`.
+
+
+
+### Side notes
+
+(*) When passing scalar arguments to an operator, use types `int64_t` (corresponds to python `int`) and `double` (python `float`) for the C operator.
