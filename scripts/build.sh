@@ -8,7 +8,6 @@ pip install --upgrade pip
 
 pip install --upgrade numba scipy huggingface-hub[cli]
 pip install "numpy<2"
-pip install -r requirements-rocm.txt
 pip install setuptools_scm
 pip install matplotlib
 pip install tabulate
