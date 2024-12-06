@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# CMake generated files
+*.so
+
 # Virtual environments
 .venv
 

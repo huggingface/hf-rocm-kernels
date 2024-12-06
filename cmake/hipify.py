@@ -67,6 +67,11 @@ if __name__ == "__main__":
         )
         hipified_sources.append(hipified_s_abs)
 
+        # If the file did not contain anything to "hipify", the hipified file still has a .cu extension.
+        # But then CMake will not find it! So we change the extension ourselves.
+        if hipified_s_abs[-3:] == ".cu":
+            shutil.move(hipified_s_abs, hipified_s_abs[:-3] + ".hip")
+
     assert len(hipified_sources) == len(args.sources)
 
     # Print hipified source files.
