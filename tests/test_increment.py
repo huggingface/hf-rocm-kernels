@@ -5,7 +5,6 @@ from hf_rocm_kernels import increment
 
 
 if __name__ == "__main__":
-
     x = torch.rand(size=(128,), device="cuda")
     y = x.clone()
     increment(x)

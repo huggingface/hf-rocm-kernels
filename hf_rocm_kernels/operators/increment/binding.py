@@ -1,6 +1,6 @@
 import torch
 
-import hf_rocm_kernels._C
+import hf_rocm_kernels._C  # noqa: F401
 
 
 def _increment(x: torch.Tensor) -> None:

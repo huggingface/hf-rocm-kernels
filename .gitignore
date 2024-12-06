@@ -13,3 +13,6 @@ wheels/
 .venv
 
 .ropeproject
+.pytest_cache
+.ruff_cache
+.uv_cache

@@ -293,7 +293,7 @@ ext_modules = []
 root = os.path.dirname(__file__)
 for dir_name in os.listdir(os.path.join(root, "csrc", "op_src")):
     # TODO: with only the "increment" operator, this test did not pass but linking did.
-    # So skipping this test for now, turn it back on if linking fails. 
+    # So skipping this test for now, turn it back on if linking fails.
     continue
     assert len(dir_name) <= 6 or dir_name.startswith((".", "__")), f"{dir_name = } too long for op_src"
 
