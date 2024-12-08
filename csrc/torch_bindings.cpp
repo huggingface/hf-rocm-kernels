@@ -19,8 +19,8 @@
 
 TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     // Increment operator
-	ops.def("increment(Tensor! x) -> ()");
-	ops.impl("increment", torch::kCUDA, &increment);
+    ops.def("increment(Tensor! x) -> ()");
+    ops.impl("increment", torch::kCUDA, &increment);
 }
 
 REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
