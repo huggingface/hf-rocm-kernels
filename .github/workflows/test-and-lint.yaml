@@ -1,0 +1,28 @@
+name: Test and lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, labeled, reopened, synchronize]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          pip install ruff clang-format
+      - name: Ruff check
+        run: |
+          ruff check
+      - name: Clang-format check
+        run: |
+          find csrc -name '*.h' -o -name '*.cpp' -o -name '*.cu' -o -name '*.cuh' \
+          | xargs clang-format --dry-run  --Werror
