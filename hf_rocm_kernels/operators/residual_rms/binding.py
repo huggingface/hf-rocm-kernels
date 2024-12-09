@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-import hf_rocm_kernels._C
+import hf_rocm_kernels._C # noqa: F401
 
 
 def _residual_rms(
