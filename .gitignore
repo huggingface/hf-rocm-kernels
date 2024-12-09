@@ -9,6 +9,9 @@ wheels/
 # CMake generated files
 *.so
 
+# Misc. files
+*.png
+
 # Virtual environments
 .venv
 
