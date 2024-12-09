@@ -1,7 +1,7 @@
 from tqdm import tqdm
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
-from hf_rocm_kernels.utils.benchmark import Bench
+from hf_rocm_kernels.utils.benchmarking import Bench
 
 
 if __name__ == "__main__":
