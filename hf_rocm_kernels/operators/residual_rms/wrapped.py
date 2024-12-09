@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch
 from torch import Tensor
 
@@ -43,7 +44,7 @@ def residual_rms(
     scale: float,
     mode: int = 0,
     num_threads: int = 0,
-) -> Tensor:
+) -> Tuple[Tensor, Tensor]:
     """Kernel that fuses a residual connection, an RMS normalization and a conversion to fp8. The resdiual argument is
     modified inplace (residual <- input + residual).
     Args:
@@ -55,7 +56,8 @@ def residual_rms(
         - mode: the dispatch mode used for the C++ operation. Default value is 0
         - num_threads: the number of threads per block in the kernel. Default value is 0, which then defaults to 1024
     Outputs:
-        an fp8 tensor of shape (rows, cols) in row-major format.
+        - an fp8 tensor of shape (rows, cols) in row-major format
+        - the residual modified in place
     """
     residual_rms_checks(input, residual, weight, epsilon)
     num_threads = infer_num_threads(num_threads)
@@ -66,8 +68,8 @@ def residual_rms(
         weight=weight,
         output=output,
         epsilon=epsilon,
-        scale=scale,
+        scale=(1 / (2 * scale)),
         mode=mode,
         num_threads=infer_num_threads(num_threads),
     )
-    return output
+    return output, residual

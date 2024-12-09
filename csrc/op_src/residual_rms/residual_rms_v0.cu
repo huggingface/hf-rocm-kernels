@@ -22,6 +22,7 @@ __global__ void _residual_rms_v0(
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols;
     residual += blockIdx.x * cols;
+    output += blockIdx.x * cols;
 
 	// Residual connection: inplace add of input to residual, accumulate norm along the way
     float variance = 0.0f;
@@ -47,13 +48,14 @@ __global__ void _residual_rms_v0(
 	__syncthreads();
 
 	// Normalize and convert
-    half scale_ = (half) scale;
 	for (int idx = threadIdx.x; idx < cols; idx += blockDim.x) {
 		float x = (float) residual[idx];
         half y = (half) (x * shared_normalizer);
-        y = (y * weight[idx]) * scale_;
-        FP8_CLAMP(y, half);
-		output[idx] = __hip_cvt_float_to_fp8((float) y, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
+        y = (y * weight[idx]);
+        x = (float) y;
+        x *= scale;
+        FP8_CLAMP(x, float);
+		output[idx] = __hip_cvt_float_to_fp8(x, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
 	}
 }
 
@@ -68,3 +70,5 @@ __global__ void _residual_rms_v0(
         scale,                                      \
         cols                                        \
 ))
+
+// TODO (remi-or) vectorize the conversion
