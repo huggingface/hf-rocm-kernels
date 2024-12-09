@@ -164,6 +164,7 @@ message(STATUS "FetchContent base directory: ${FETCHCONTENT_BASE_DIR}")
 set(KERNEL_SRC
   "csrc/torch_bindings.cpp"
   "csrc/op_src/increment/increment_op.cu"
+  "csrc/op_src/residual_rms/residual_rms_dispatch.cu"
 )
 
 message(STATUS "Enabling C extension.")
