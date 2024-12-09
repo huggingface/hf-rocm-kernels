@@ -18,10 +18,11 @@ if __name__ == "__main__":
             fn=lambda: reference_residual_rms(*args),
         )
         for mode in [0, 1]:
+            scale = args[-1].item()
             bench.add_measure(
                 header=f"Mode {mode} (μs)", 
                 label=rows, 
-                fn=lambda: residual_rms(*args[:-1], args[-1].item(), mode=mode),
+                fn=lambda: residual_rms(*args[:-1], scale, mode=mode),
             )
 
     bench.display_table(row_header="Nb. rows")
