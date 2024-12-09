@@ -1,10 +1,8 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAGuard.h>
-#include <hip/hip_cooperative_groups.h>
 #include <hip/hip_runtime.h>
 
 #include "op_src/residual_rms/residual_rms_v0.cu"
-// TODO: clean up imports
 
 void residual_rms(torch::Tensor& input,     // Shape: [m, n] / Layout: row-major / Dtype: fp16
                   torch::Tensor& residual,  // Shape: [m, n] / Layout: row-major / Dtype: fp16

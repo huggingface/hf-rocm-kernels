@@ -49,5 +49,3 @@ if __name__ == "__main__":
     for mode in [0]:
         print("-" * 40, f"Tests for {mode = }", "-" * 40, sep="\n")
         _test_residual_rms(NB_TOKENS, HIDDEN_SIZE, verbose=True)
-
-#TODO: add bm

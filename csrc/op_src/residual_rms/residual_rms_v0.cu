@@ -7,7 +7,6 @@
 #include <hip/hip_fp8.h>
 
 #include "utils/macros.h"
-// TODO: clean up imports
 
 __global__ void _residual_rms_v0(const half* __restrict__ input, half* __restrict__ residual,
                                  const half* __restrict__ weight, __hip_fp8_storage_t* __restrict__ output,
