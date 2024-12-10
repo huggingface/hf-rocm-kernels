@@ -50,13 +50,23 @@ def residual_rms_choose_mode(
     return mode
 
 
-def infer_num_threads(num_threads: int) -> int:
+def infer_num_threads(rows: int, mode: int, num_threads: int) -> int:
+    # Error case
     if num_threads < 0 or num_threads > 1024:
         raise ValueError(f"{num_threads = } is not between 0 and 1024")
-    elif num_threads == 0:
-        return 1024 # TODO: refine this thinking
-    else:
+    # Case: num_threads was specified
+    elif num_threads != 0:
         return num_threads
+    # Case: mode == 0, ie. not vectorized mode
+    if mode == 0:
+        return 1024 
+    # Otherwise, we branch upon the number of rows
+    if rows <= 32:
+        return 1024
+    elif rows <= 128:
+        return 768
+    return 256
+
 
 def residual_rms(
     input: Tensor, 
@@ -84,7 +94,7 @@ def residual_rms(
     """
     residual_rms_checks(input, residual, weight, epsilon)
     mode = residual_rms_choose_mode(input, residual, weight, mode)
-    num_threads = infer_num_threads(num_threads)
+    num_threads = infer_num_threads(input.size(0), mode, num_threads)
     output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
     _residual_rms(
         input=input,
@@ -94,6 +104,6 @@ def residual_rms(
         epsilon=epsilon,
         scale=(1 / (2 * scale)),
         mode=mode,
-        num_threads=infer_num_threads(num_threads),
+        num_threads=num_threads,
     )
     return output, residual
