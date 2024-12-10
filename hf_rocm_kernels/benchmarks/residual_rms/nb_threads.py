@@ -12,10 +12,11 @@ if __name__ == "__main__":
     # Parameters
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     cols = 16384
-    mode = 3
+    mode = 4
 
     # Delete old figure 
-    os.remove("__bench__.png")
+    if os.path.exists("__bench__.png"):
+        os.remove("__bench__.png")
 
     # Loop over the number of rows
     for rows in list_rows:

@@ -22,7 +22,7 @@ def _test_residual_rms(rows: int, cols: int, mode: int, verbose: bool) -> Tuple[
         compare_x_with_ref(scale_, ref_scale, "scale" if verbose else None),
     )
 
-@pytest.mark.parametrize("mode", [0, 1, 2, 3])
+@pytest.mark.parametrize("mode", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("cols", [8, 24, 128, 512, 4096, 16384])
 @pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256])
 def test_residual_rms(
@@ -46,8 +46,8 @@ def test_residual_rms(
 if __name__ == "__main__":
 
     NB_TOKENS = 1
-    HIDDEN_SIZE = 24
-    MODE = 2
+    HIDDEN_SIZE = 16384
+    MODE = 4
 
     print("Test for residual_rms:", f"{NB_TOKENS = }", f"{HIDDEN_SIZE = }", f"{MODE = }", sep="\n\t")
     _test_residual_rms(NB_TOKENS, HIDDEN_SIZE, MODE, verbose=True)
