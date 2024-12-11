@@ -27,8 +27,7 @@ void residual_rms(torch::Tensor& input,     // Shape: [m, n] / Layout: row-major
     const cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     // Launch kernel
-    switch (mode)
-    {
+    switch (mode) {
         case 1:
             LAUNCH_RESIDUAL_RMS_V1;
             break;

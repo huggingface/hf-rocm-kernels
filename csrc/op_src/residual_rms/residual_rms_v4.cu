@@ -8,18 +8,17 @@
 
 #include "utils/macros.h"
 
-#define WPT 8 // WorkPerThreads
-#define CDIV(a, b) ((a + b - 1) / (b)) // Ceiling division
-
+#define WPT 8                           // WorkPerThreads
+#define CDIV(a, b) ((a + b - 1) / (b))  // Ceiling division
 
 __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __restrict__ residual,
                                  const __half2* __restrict__ weight, __hip_fp8x2_storage_t* __restrict__ output,
                                  const float epsilon, const float scale, const int cols) {
     // Advance pointers according to the position of the thread in the grid
-    input +=    (blockIdx.x * cols + WPT * threadIdx.x) / 2;
+    input += (blockIdx.x * cols + WPT * threadIdx.x) / 2;
     residual += (blockIdx.x * cols + WPT * threadIdx.x) / 2;
-    weight +=   (                    WPT * threadIdx.x) / 2;
-    output +=   (blockIdx.x * cols + WPT * threadIdx.x) / 2;
+    weight += (WPT * threadIdx.x) / 2;
+    output += (blockIdx.x * cols + WPT * threadIdx.x) / 2;
 
     // Residual connection: inplace add of input to residual, accumulate norm along the way
     float variance = 0.0f;
@@ -30,30 +29,28 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
     const int loop_stride = blockDim.x * (WPT / 2);
     const int iterations = CDIV(cols - WPT * threadIdx.x, 2 * loop_stride);
     for (int i = 0; i < iterations; i++) {
-
-        // Load data using 128-bits loads
-        #pragma unroll 
+// Load data using 128-bits loads
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             input_buffer[j] = input[j];
         }
-        #pragma unroll
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             residual_buffer[j] = residual[j];
         }
 
-        // Residual connection and variance accumulation
-        #pragma unroll 
+// Residual connection and variance accumulation
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             asm volatile(
-                "V_PK_ADD_F16 %0, %2, %3\n\t" 
+                "V_PK_ADD_F16 %0, %2, %3\n\t"
                 "V_DOT2C_F32_F16 %1, %2, %2"
-                : "=v" (residual_buffer[j]), "=v" (variance)
-                : "0" (residual_buffer[j]), "v"(input_buffer[j])
-            );
+                : "=v"(residual_buffer[j]), "=v"(variance)
+                : "0"(residual_buffer[j]), "v"(input_buffer[j]));
         }
-        
-        // 128-bits store
-        #pragma unroll
+
+// 128-bits store
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             residual[j] = residual_buffer[j];
         }
@@ -82,20 +79,19 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
     __hip_fp8x2_storage_t fp8x2_buffer[WPT / 2];
 
     residual -= iterations * loop_stride;
-    for (int i = 0; i < iterations; i ++) {
-
-        // 128-bits loads
-        #pragma unroll 
+    for (int i = 0; i < iterations; i++) {
+// 128-bits loads
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             residual_buffer_[j] = residual[j];
         }
-        #pragma unroll 
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             weight_buffer[j] = weight[j];
         }
 
-        // Compute and fill buffer
-        #pragma unroll 
+// Compute and fill buffer
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             // .x
             tmp_float2.x = (float)residual_buffer_[j].x * shared_normalizer;
@@ -111,8 +107,8 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
             fp8x2_buffer[j] = __hip_cvt_float2_to_fp8x2(tmp_float2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
         }
 
-        // 64b store
-        #pragma unroll 
+// 64b store
+#pragma unroll
         for (int j = 0; j < WPT / 2; j++) {
             output[j] = fp8x2_buffer[j];
         }
@@ -124,7 +120,7 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
     }
 }
 
-#define LAUNCH_RESIDUAL_RMS_V4                                                                                         \
-    (_residual_rms_v4<<<grid, block, 0, stream>>>((__half2*)input.data_ptr(), (__half2*)residual.data_ptr(),                 \
-                                                  (__half2*)weight.data_ptr(), (__hip_fp8x2_storage_t*)output.data_ptr(), \
-                                                  epsilon, scale, cols))
+#define LAUNCH_RESIDUAL_RMS_V4                                                                               \
+    (_residual_rms_v4<<<grid, block, 0, stream>>>((__half2*)input.data_ptr(), (__half2*)residual.data_ptr(), \
+                                                  (__half2*)weight.data_ptr(),                               \
+                                                  (__hip_fp8x2_storage_t*)output.data_ptr(), epsilon, scale, cols))

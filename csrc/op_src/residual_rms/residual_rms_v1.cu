@@ -8,7 +8,7 @@
 
 #include "utils/macros.h"
 
-#define WPT 8 // WorkPerThreads
+#define WPT 8  // WorkPerThreads
 
 __global__ void _residual_rms_v1(const half* __restrict__ input, half* __restrict__ residual,
                                  const half* __restrict__ weight, __hip_fp8_storage_t* __restrict__ output,
@@ -25,27 +25,26 @@ __global__ void _residual_rms_v1(const half* __restrict__ input, half* __restric
     half residual_buffer[WPT];
 
     for (int i = WPT * threadIdx.x; i < cols; i += WPT * blockDim.x) {
-
-        // Load data using 128-bits loads
-        #pragma unroll 
+// Load data using 128-bits loads
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             input_buffer[j] = input[i + j];
         }
-        #pragma unroll
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             residual_buffer[j] = residual[i + j];
         }
 
-        // Add everything in the residual buffer and accumulate variance
-        #pragma unroll 
+// Add everything in the residual buffer and accumulate variance
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             residual_buffer[j] += input_buffer[j];
             fp32_residual = (float)residual_buffer[j];
             variance += fp32_residual * fp32_residual;
         }
-        
-        // 128-bits store
-        #pragma unroll
+
+// 128-bits store
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             residual[i + j] = residual_buffer[j];
         }
@@ -70,29 +69,28 @@ __global__ void _residual_rms_v1(const half* __restrict__ input, half* __restric
     __hip_fp8_storage_t fp8_buffer[WPT];
 
     for (int i = WPT * threadIdx.x; i < cols; i += WPT * blockDim.x) {
-
-        // 128-bits loads
-        #pragma unroll 
+// 128-bits loads
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             residual_buffer_[j] = residual[i + j];
         }
-        #pragma unroll 
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             weight_buffer[j] = weight[i + j];
         }
 
-        // Compute and fill buffer
-        #pragma unroll 
+// Compute and fill buffer
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             tmp_float = (float)residual_buffer_[j] * shared_normalizer;
-            tmp_float = (float)((half)(tmp_float) * weight_buffer[j]);
+            tmp_float = (float)((half)(tmp_float)*weight_buffer[j]);
             tmp_float *= scale;
             FP8_CLAMP(tmp_float, float);
             fp8_buffer[j] = __hip_cvt_float_to_fp8(tmp_float, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
         }
 
-        // 64b store
-        #pragma unroll 
+// 64b store
+#pragma unroll
         for (int j = 0; j < WPT; j++) {
             output[i + j] = fp8_buffer[j];
         }
