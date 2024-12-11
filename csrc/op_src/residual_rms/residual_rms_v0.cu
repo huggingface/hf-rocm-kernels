@@ -55,5 +55,3 @@ __global__ void _residual_rms_v0(const half* __restrict__ input, half* __restric
     (_residual_rms_v0<<<grid, block, 0, stream>>>((half*)input.data_ptr(), (half*)residual.data_ptr(),               \
                                                   (half*)weight.data_ptr(), (__hip_fp8_storage_t*)output.data_ptr(), \
                                                   epsilon, scale, cols))
-
-// TODO (remi-or) vectorize the conversion

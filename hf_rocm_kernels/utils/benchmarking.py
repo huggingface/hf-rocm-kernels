@@ -1,7 +1,8 @@
 import torch
-from typing import Callable
+from typing import Callable, Dict
 from triton.testing import do_bench_cudagraph
 import tabulate
+import warnings
 import itertools
 
 
@@ -10,12 +11,27 @@ class Bench:
 
     def __init__(self) -> None:
         self.enter_benchmark_mode()
+        self.check_device_is_free(warn_if_not=True)
         self._measures = {}
 
     def enter_benchmark_mode(self) -> None:
         """Turns off gradient and activates TunableOps to get maximum performances."""
         torch.set_grad_enabled(False)
         torch.cuda.tunable.enable(val=True)
+
+    def check_device_is_free(self, warn_if_not: bool = False) -> Dict[str, int]:
+        """Checks whether or not the GPU is free and returns the relevant metrics."""
+        metrics = {
+            "utilization": torch.cuda.utilization(),
+            "memory_usage": torch.cuda.memory_usage(),
+        }
+        over_the_limit = any([
+            metrics["utilization"] > 0,
+            metrics["memory_usage"] > 784,
+        ])
+        if warn_if_not and over_the_limit:
+            warnings.warn(f"Device {torch.cuda.current_device()} is not fully free: {metrics = }")
+        return metrics
 
     def benchmark_fn(self, fn: Callable[[], None], rep: int = 100) -> float:
         """Benchmarks a function using triton's cuda graphs's benchmark."""

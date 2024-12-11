@@ -3,6 +3,10 @@
 #include <hip/hip_runtime.h>
 
 #include "op_src/residual_rms/residual_rms_v0.cu"
+#include "op_src/residual_rms/residual_rms_v1.cu"
+#include "op_src/residual_rms/residual_rms_v2.cu"
+#include "op_src/residual_rms/residual_rms_v3.cu"
+#include "op_src/residual_rms/residual_rms_v4.cu"
 
 void residual_rms(torch::Tensor& input,     // Shape: [m, n] / Layout: row-major / Dtype: fp16
                   torch::Tensor& residual,  // Shape: [m, n] / Layout: row-major / Dtype: fp16
@@ -23,5 +27,30 @@ void residual_rms(torch::Tensor& input,     // Shape: [m, n] / Layout: row-major
     const cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
     // Launch kernel
-    LAUNCH_RESIDUAL_RMS_V0;
+    switch (mode) {
+        case 1:
+            LAUNCH_RESIDUAL_RMS_V1;
+            break;
+        case 2:
+            LAUNCH_RESIDUAL_RMS_V2;
+            break;
+        case 3:
+            LAUNCH_RESIDUAL_RMS_V3;
+            break;
+        case 4:
+            LAUNCH_RESIDUAL_RMS_V4;
+            break;
+        default:
+            LAUNCH_RESIDUAL_RMS_V0;
+            break;
+    }
 }
+
+/*
+    Versions:
+        0. non-vectorized version
+        1. vectorizes loads and stores
+        2. simplified indexing
+        3. added packed conversion
+        4. using packed types everywhere and custom ASM for residual connection and variance
+*/

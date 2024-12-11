@@ -30,7 +30,7 @@ def compare_x_with_ref(x: Tensor, ref: Tensor, name: Optional[str] = None) -> Tu
             print(f"Not good for {name}")
             # Print the start of both tensors
             print(f"\n#-- Fragment of {name} --#")
-            viz = 8 # you can increase this when debugging
+            viz = 4 # you can increase this when debugging
             print("Reference:", ref.flatten().tolist()[:viz], "...", ref.flatten().tolist()[-viz:])
             print("Computed: ", x.flatten().tolist()[:viz], "...", x.flatten().tolist()[-viz:])
             # Print their absolute max difference

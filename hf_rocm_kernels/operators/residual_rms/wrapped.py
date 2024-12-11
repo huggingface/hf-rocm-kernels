@@ -5,6 +5,9 @@ from torch import Tensor
 from .binding import _residual_rms
 
 
+_HIGHEST_RESIDUAL_RMS_MODE = 1
+
+
 def residual_rms_checks(
     input: Tensor, 
     residual: Tensor, 
@@ -28,13 +31,42 @@ def residual_rms_checks(
     assert epsilon > 0, f"Expected RMS epsilon to be > 0 to avoid division by zero, but got {epsilon = }"
 
 
-def infer_num_threads(num_threads: int) -> int:
+def residual_rms_choose_mode(
+    input: Tensor, 
+    residual: Tensor, 
+    weight: Tensor, 
+    mode: int,
+) -> int:
+    cols_is_multiple_of_8 = input.size(1) % 8 == 0
+    tensors_are_16b_aligned = all([x.data_ptr() % 16 == 0 for x in [input, residual, weight]])
+    if mode == -1:
+        mode = _HIGHEST_RESIDUAL_RMS_MODE if (tensors_are_16b_aligned and cols_is_multiple_of_8) else 0
+    elif mode > 0:
+        assert tensors_are_16b_aligned, (
+            f"Requested a {mode = } > 0 requires tensors to be 16 bits aligned but got {input.data_ptr() % 16 = }, "
+            f"{residual.data_ptr() % 16 = }, {weight.data_ptr() % 16 = }"
+        )
+        assert cols_is_multiple_of_8, f"Requested {mode = } requires {input.size(1) = } to be a multiple of 8."
+    return mode
+
+
+def infer_num_threads(rows: int, mode: int, num_threads: int) -> int:
+    # Error case
     if num_threads < 0 or num_threads > 1024:
         raise ValueError(f"{num_threads = } is not between 0 and 1024")
-    elif num_threads == 0:
-        return 1024 # TODO: refine this thinking
-    else:
+    # Case: num_threads was specified
+    elif num_threads != 0:
         return num_threads
+    # Case: mode == 0, ie. not vectorized mode
+    if mode == 0:
+        return 1024 
+    # Otherwise, we branch upon the number of rows
+    if rows <= 32:
+        return 1024
+    elif rows <= 128:
+        return 768
+    return 256
+
 
 def residual_rms(
     input: Tensor, 
@@ -42,7 +74,7 @@ def residual_rms(
     weight: Tensor,
     epsilon: float, 
     scale: float,
-    mode: int = 0,
+    mode: int = -1,
     num_threads: int = 0,
 ) -> Tuple[Tensor, Tensor]:
     """Kernel that fuses a residual connection, an RMS normalization and a conversion to fp8. The resdiual argument is
@@ -53,14 +85,16 @@ def residual_rms(
         - weight: a fp16 tensor of shape (cols, ) in row-major format which contains the weight of the RMS norm
         - epsilon: the small epsilon used inside the RMS norm to avoid division by zero
         - scale: a float to scale the output of the RMS norm before their conversion to fp8
-        - mode: the dispatch mode used for the C++ operation. Default value is 0
+        - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically
+            depending on tensor alignment. If a specific mode is chosen and needs tensor alignment, an error is raised
         - num_threads: the number of threads per block in the kernel. Default value is 0, which then defaults to 1024
     Outputs:
         - an fp8 tensor of shape (rows, cols) in row-major format
         - the residual modified in place
     """
     residual_rms_checks(input, residual, weight, epsilon)
-    num_threads = infer_num_threads(num_threads)
+    mode = residual_rms_choose_mode(input, residual, weight, mode)
+    num_threads = infer_num_threads(input.size(0), mode, num_threads)
     output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
     _residual_rms(
         input=input,
@@ -70,6 +104,6 @@ def residual_rms(
         epsilon=epsilon,
         scale=(1 / (2 * scale)),
         mode=mode,
-        num_threads=infer_num_threads(num_threads),
+        num_threads=num_threads,
     )
     return output, residual
