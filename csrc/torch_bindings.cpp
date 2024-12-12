@@ -27,6 +27,11 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
         "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor! output, float epsilon, float scale, int "
         "mode, int num_threads) -> ()");
     ops.impl("residual_rms", torch::kCUDA, &residual_rms);
+
+    // WIP: sparse-k
+    ops.def(
+        "sparse_k(Tensor A, Tensor B, Tensor! D) -> ()");
+    ops.impl("sparse_k", torch::kCUDA, &sparse_k);
 }
 
 REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
