@@ -30,7 +30,7 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
 
     // WIP: sparse-k
     ops.def(
-        "sparse_k(Tensor A, Tensor B, Tensor! D) -> ()");
+        "sparse_k(Tensor A, Tensor B, Tensor! D, int W) -> ()");
     ops.impl("sparse_k", torch::kCUDA, &sparse_k);
 }
 

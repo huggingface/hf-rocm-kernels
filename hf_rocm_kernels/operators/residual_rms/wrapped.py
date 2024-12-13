@@ -14,6 +14,7 @@ def residual_rms_checks(
     weight: Tensor, 
     epsilon: float,
 ) -> None:
+    # TODO: check dtypes
     # Check shapes
     assert input.dim() == 2, f"Expected input to have 2 dimensions but got {input.dim() = } instead."
     assert residual.shape == input.shape, \
