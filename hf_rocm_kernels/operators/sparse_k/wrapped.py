@@ -35,7 +35,7 @@ def infer_warps_per_block(m: int, warps_per_block: Optional[int]) -> int:
     if warps_per_block is not None:
         # assert warps_per_block in [1, 2, 3, 4, 5], f"Incorrect value for {warps_per_block = }"
         return warps_per_block
-    return {8: 4, 16: 3}.get(m, 1)
+    return {8: 6, 16: 6, 24: 3}.get(m, 1)
 
 
 def sparse_k(

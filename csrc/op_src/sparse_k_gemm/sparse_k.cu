@@ -120,10 +120,12 @@ __global__ void skinny_fp8_gemm(
     // Account for the number of threads per blocktile
     int block_iterations = (k / WARPTILE_K);
     int iterations_per_warp = block_iterations / warps_per_block;
-    int warp_iter_offs, warp_start, warp_end;
-    warp_start = warp_id * iterations_per_warp - ( (warp_id % 2 == 0) ? 0 : 2 * (1 + (warp_id / 2)) );
-    warp_end = (warp_id + 1) * iterations_per_warp - ( (warp_id % 2 == 0) ? 2 * (1 + (warp_id / 2)) : 0 );
-    warp_end = (warp_id == (warps_per_block - 1)) ? block_iterations : warp_end;
+    // int warp_iter_offs, warp_start, warp_end;
+    // warp_start = warp_id * iterations_per_warp - ( (warp_id % 2 == 0) ? 0 : 2 * (1 + (warp_id / 2)) );
+    // warp_end = (warp_id + 1) * iterations_per_warp - ( (warp_id % 2 == 0) ? 2 * (1 + (warp_id / 2)) : 0 );
+    // warp_end = (warp_id == (warps_per_block - 1)) ? block_iterations : warp_end;
+    int warp_start = warp_id * iterations_per_warp;
+    int warp_end = (warp_id == warps_per_block - 1) ? block_iterations : ((warp_id + 1) * iterations_per_warp);
 
     // Relocate pointers according to the thread's position
     A += (block_x * WARPTILE_M * k) + (warp_start * WARPTILE_K);

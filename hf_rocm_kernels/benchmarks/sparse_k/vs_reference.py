@@ -34,8 +34,7 @@ if __name__ == "__main__":
         t = bench.benchmark_fn(fn=lambda: reference_gemm(a, b, scale))
         print(f"Reference time: {t}")
 
-        for warps_per_block in range(16):
-            warps_per_block += 1
+        for warps_per_block in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
             a = torch.rand(size=(m, k), device="cuda").to(torch.float8_e4m3fnuz)
             b = torch.rand(size=(n, k), device="cuda").to(torch.float8_e4m3fnuz).T
 
