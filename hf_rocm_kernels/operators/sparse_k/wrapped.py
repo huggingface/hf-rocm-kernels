@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 import torch
 from torch import Tensor
 
@@ -16,7 +16,7 @@ def sparse_k_checks(
     assert skinny_a.dim() == 2, f"Expected skinny_a to have 2 dimensions but got {skinny_a.dim() = } instead."
     assert skinny_a.size(1) == b.size(0), f"Expected {skinny_a.size(1) = } and {b.size(0) = } to be the same."
     # Temporary restrictions (TODO)
-    assert skinny_a.size(0) == 8, f"Right now, {skinny_a.size(0) = } must be 8."
+    assert skinny_a.size(0) % 8 == 0, f"Right now, {skinny_a.size(0) = } must be a multiple of 8."
     assert skinny_a.size(1) % 64 == 0, f"Right now, {skinny_a.size(1) = } must be a multiple of 64."
     assert b.size(1) % 16 == 0, f"Right now, {b.size(0) = } must be a multiple of 16."
     # Check layouts
@@ -31,16 +31,17 @@ def sparse_k_checks(
     assert b.device == device, f"Expected {b.device = } to be the same as {b.device = }"
 
 
-def infer_warps_per_block(n: int) -> int:
-    for warps_per_block in [8, 4, 2, 1]:
-        if n % (16 * warps_per_block) == 0:
-            return warps_per_block
-    raise ValueError(f"{n = } is not divisible by 16")
+def infer_warps_per_block(m: int, warps_per_block: Optional[int]) -> int:
+    if warps_per_block is not None:
+        # assert warps_per_block in [1, 2, 3, 4, 5], f"Incorrect value for {warps_per_block = }"
+        return warps_per_block
+    return {8: 4, 16: 3}.get(m, 1)
 
 
 def sparse_k(
     skinny_a: Tensor, 
     b: Tensor,
+    warps_per_block: Optional[int] = None,
 ) -> Tensor:
     """Skinny GEMM kernel that leverages artifical sparsity.
     Args:
@@ -50,7 +51,7 @@ def sparse_k(
         an fp32 tensor of shape (m, n) in row-major format
     """
     sparse_k_checks(skinny_a, b)
-    warps_per_block = infer_warps_per_block(b.size(1))
-    output = torch.zeros(size=(16, b.size(1)), dtype=torch.float32, device=skinny_a.device)
+    warps_per_block = infer_warps_per_block(skinny_a.size(0), warps_per_block)
+    output = torch.empty(size=(skinny_a.size(0), b.size(1)), dtype=torch.float32, device=skinny_a.device)
     _sparse_k(skinny_a, b, output, warps_per_block)
     return output
