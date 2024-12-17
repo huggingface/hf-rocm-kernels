@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-import hf_rocm_kernels._C # noqa: F401
+import hf_rocm_kernels._C_HFRK # noqa: F401
 
 
 def _residual_rms(
@@ -14,4 +14,4 @@ def _residual_rms(
     mode: int,
     num_threads: int,
 ) -> None:
-    torch.ops._C.residual_rms(input, residual, weight, output, epsilon, scale, mode, num_threads)
+    torch.ops._C_HFRK.residual_rms(input, residual, weight, output, epsilon, scale, mode, num_threads)

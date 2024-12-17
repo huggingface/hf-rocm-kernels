@@ -7,7 +7,7 @@ from hf_rocm_kernels.utils.benchmarking import Bench
 if __name__ == "__main__":
     bench = Bench()
 
-    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256, 1024]
     cols = 6656 # to imitate Llama3.1 405B in TP8
 
     for rows in tqdm(list_rows, "Gathering reference times"): #TODO: change tag

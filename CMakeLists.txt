@@ -9,8 +9,8 @@ cmake_minimum_required(VERSION 3.26)
 # cmake --build . --target install
 #
 # If you want to only build one target, make sure to install it manually:
-# cmake --build . --target _C
-# cmake --install . --component _C
+# cmake --build . --target _C_HFRK
+# cmake --install . --component _C_HFRK
 project(hf_rocm_kernels LANGUAGES CXX)
 
 # CUDA by default, can be overridden by using -DTARGET_DEVICE=... (used by setup.py)
@@ -170,7 +170,7 @@ set(KERNEL_SRC
 
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(
-  _C
+  _C_HFRK
   DESTINATION hf_rocm_kernels
   LANGUAGE ${GPU_LANG}
   SOURCES ${KERNEL_SRC}
@@ -184,4 +184,4 @@ define_gpu_extension_target(
 # cudaGetDriverEntryPointByVersion as a wrapper to avoid directly calling the
 # driver API. This causes problems when linking with earlier versions of CUDA.
 # Setting this variable sidesteps the issue by calling the driver directly.
-target_compile_definitions(_C PRIVATE CUTLASS_ENABLE_DIRECT_CUDA_DRIVER_CALL=1)
+target_compile_definitions(_C_HFRK PRIVATE CUTLASS_ENABLE_DIRECT_CUDA_DRIVER_CALL=1)
