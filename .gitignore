@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+tunableop_results*
 
 # CMake generated files
 *.so
@@ -18,6 +19,7 @@ wheels/
 # Virtual environments
 .venv
 
+*.code-workspace
 .ropeproject
 .pytest_cache
 .ruff_cache

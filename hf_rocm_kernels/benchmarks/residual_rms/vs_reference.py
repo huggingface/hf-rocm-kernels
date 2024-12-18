@@ -10,7 +10,7 @@ if __name__ == "__main__":
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     cols = 6656 # to imitate Llama3.1 405B in TP8
 
-    for rows in tqdm(list_rows, "Gathering reference times"):
+    for rows in tqdm(list_rows, "Gathering measures"):
         args = generate_residual_rms_data(rows, cols)
         bench.add_measure(
             header="Ref (μs)", 
