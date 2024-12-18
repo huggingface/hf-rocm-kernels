@@ -76,11 +76,11 @@ Finaly, we add the python-side of the binding. We create the directory `incremen
 ```
 import torch
 
-import hf_rocm_kernels._C
+import hf_rocm_kernels._HFRK_C
 
 
 def _increment(x: torch.Tensor) -> None:
-    torch.ops._C.increment(x)
+    torch.ops._HFRK_C.increment(x)
 ```
 
 Ideally, we then create a user-friendly version of the operator with checks (eg. assert tensors are on device and in the right layout) and documentation, as was done in `hf_rocm_kernels/increment/wrapped.py`. That version should be the one exposed in `hf_rocm_kernels/__init__.py`.

@@ -299,7 +299,7 @@ for dir_name in os.listdir(os.path.join(root, "csrc", "op_src")):
 
 
 if _build_custom_ops():
-    ext_modules.append(CMakeExtension(name="hf_rocm_kernels._C"))
+    ext_modules.append(CMakeExtension(name="hf_rocm_kernels._HFRK_C"))
 
 package_data = {"hf_rocm_kernels": ["py.typed"]}
 if USE_PRECOMPILED:
