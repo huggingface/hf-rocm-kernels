@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 from torch import Tensor
+import vllm._C
 
 from hf_rocm_kernels.operators.sparse_k import sparse_k # TODO:, generate_sparse_k_data, reference_sparse_k
 from hf_rocm_kernels.utils.benchmarking import Bench
@@ -12,15 +13,16 @@ def reference_gemm(a: Tensor, b: Tensor, scale: Tensor) -> Tensor:
         b, 
         scale_a=scale, 
         scale_b=scale, 
-        out_dtype=torch.float32,
+        out_dtype=torch.float16,
+        use_fast_accum=False,
     )
 
 
 if __name__ == "__main__":
     bench = Bench()
 
-    ms = [8, 16, 24]
-    n = 6656 # to imitate Llama3.1 405B in TP8
+    ms = [8]
+    n = 13312 # = 2 * (53248 // 8) # to imitate Llama3.1 405B in TP8
     k = 16384
 
 

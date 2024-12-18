@@ -52,6 +52,6 @@ def sparse_k(
     """
     sparse_k_checks(skinny_a, b)
     warps_per_block = infer_warps_per_block(skinny_a.size(0), warps_per_block)
-    output = torch.empty(size=(skinny_a.size(0), b.size(1)), dtype=torch.float32, device=skinny_a.device)
+    output = torch.empty(size=(skinny_a.size(0), b.size(1)), dtype=torch.float16, device=skinny_a.device)
     _sparse_k(skinny_a, b, output, warps_per_block)
     return output

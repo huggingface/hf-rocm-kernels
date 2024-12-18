@@ -29,7 +29,7 @@ using fp8x4_4 = __attribute__( (__vector_size__(4 * sizeof(int)) )) int;
 using f32x4 = __attribute__( (__vector_size__(4 * sizeof(float)) )) float;
 
 __device__ inline void sparse_8x16x64_load(
-    const fp8x2* warptile_A,                     // Shape: [8, 64],  Layout: row-major
+    const fp8x4_4* warptile_A,                     // Shape: [8, 64],  Layout: row-major
     fp8x2_4 &thread_buffer_A,
     const int stride_A,
     const fp8x4_4* warptile_B,                     // Shape: [64, 16], Layout: col-major
@@ -37,31 +37,34 @@ __device__ inline void sparse_8x16x64_load(
     const int stride_B,
     const int thread_id
 ) {
-    // Compute the thread position in A according to the matrix layout AND accounting for the fact that A has 8 rows
-    int row_A = thread_id % 8;
-    int col_A = 16 * (thread_id / 16);
-    // This threads covers: row_A, [col_A, col_A + 16[
+    // Coalesced 128b loads
+    fp8x4_4 big_thread_buffer_A = warptile_A[(stride_A / 16) * ((thread_id / 4) % 8) + (thread_id % 4)];
+    thread_buffer_B = warptile_B[(stride_B / 16) * (thread_id / 4) + (thread_id % 4)];
 
-    // Compute the thread sparsity indices
+    // Shuffling for A
+    int src_lane = 4 * (thread_id % 8) + (thread_id / 16);
+    big_thread_buffer_A[0] = __shfl(big_thread_buffer_A[0], src_lane, WARPSIZE);
+    big_thread_buffer_A[1] = __shfl(big_thread_buffer_A[1], src_lane, WARPSIZE);
+    big_thread_buffer_A[2] = __shfl(big_thread_buffer_A[2], src_lane, WARPSIZE);
+    big_thread_buffer_A[3] = __shfl(big_thread_buffer_A[3], src_lane, WARPSIZE);
+    // Shuffling for B
+    src_lane = (thread_id % 16) * 4 + (thread_id / 16);
+    thread_buffer_B[0] = __shfl(thread_buffer_B[0], src_lane, WARPSIZE);
+    thread_buffer_B[1] = __shfl(thread_buffer_B[1], src_lane, WARPSIZE);
+    thread_buffer_B[2] = __shfl(thread_buffer_B[2], src_lane, WARPSIZE);
+    thread_buffer_B[3] = __shfl(thread_buffer_B[3], src_lane, WARPSIZE);
+
+    fp8x2_8 hbb = reinterpret_cast<fp8x2_8>(big_thread_buffer_A);
     const int thread_group = (thread_id % 16) / 8;
-
-    #pragma unroll
-    for (int i = 0; i < 4; i++) {
-        thread_buffer_A[i] = warptile_A[(row_A * stride_A + col_A) / 2 + 2 * i + thread_group];
-    }
-
-    fp8x4_4 tB = warptile_B[(stride_B / 16) * (thread_id / 4) + (thread_id % 4)];
-
-    int src_lane = (thread_id % 16) * 4 + (thread_id / 16);
-    thread_buffer_B[0] = __shfl(tB[0], src_lane, WARPSIZE);
-    thread_buffer_B[1] = __shfl(tB[1], src_lane, WARPSIZE);
-    thread_buffer_B[2] = __shfl(tB[2], src_lane, WARPSIZE);
-    thread_buffer_B[3] = __shfl(tB[3], src_lane, WARPSIZE);
+    thread_buffer_A[0] = hbb[0 + thread_group];
+    thread_buffer_A[1] = hbb[2 + thread_group];
+    thread_buffer_A[2] = hbb[4 + thread_group];
+    thread_buffer_A[3] = hbb[6 + thread_group];
 
 }
 
 __device__ void sparse_8x16x64_wgemm(
-    const fp8x2* warptile_A,                     // Shape: [8, 64],  Layout: row-major
+    const fp8x4_4* warptile_A,                     // Shape: [8, 64],  Layout: row-major
     const int stride_A,
     const fp8x4_4* warptile_B,                     // Shape: [64, 16], Layout: col-major
     const int stride_B,
@@ -92,7 +95,7 @@ __device__ void sparse_8x16x64_wgemm(
 __global__ void skinny_fp8_gemm(
     const fp8* A,
     const fp8* B,
-    float* D,
+    half* D,
     const int m,
     const int n,
     const int k,
@@ -140,7 +143,7 @@ __global__ void skinny_fp8_gemm(
 
         // Matrix fuse-mul-add
         sparse_8x16x64_wgemm(
-            reinterpret_cast<const fp8x2*>(A),
+            reinterpret_cast<const fp8x4_4*>(A),
             k,
             reinterpret_cast<const fp8x4_4*>(B),
             k,
@@ -168,7 +171,7 @@ __global__ void skinny_fp8_gemm(
         for (int i = 0; i < 4; ++i) {
             tmp = block_buffer_D[4 * thread_id + i];
             tmp += block_buffer_D[4 * (thread_id + 32) + i];
-            D[(row_D + i) * n + col_D] = tmp;
+            D[(row_D + i) * n + col_D] = (half) tmp;
         }        
     }
 }
@@ -178,7 +181,7 @@ __global__ void skinny_fp8_gemm(
     skinny_fp8_gemm<<<grid, block, 0, stream>>>(     \
         (fp8*)A.data_ptr(),                                         \
         (fp8*)B.data_ptr(),                                         \
-        (float*)D.data_ptr(),                                       \
+        (half*)D.data_ptr(),                                       \
         m, n, k, grid_m, grid_n)                                                    \
 
 void sparse_k(

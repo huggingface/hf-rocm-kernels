@@ -15,14 +15,14 @@ def reference_gemm(a: Tensor, b: Tensor) -> Tensor:
         b.to(torch.float8_e4m3fnuz), 
         scale_a=scale, 
         scale_b=scale, 
-        out_dtype=torch.float32,
+        out_dtype=torch.float16,
     )
 
 if __name__ == "__main__":
 
     m = 16
     n = 6656
-    k = 16384
+    k = 1024
 
     a = torch.rand(size=(m, k), device="cuda")
     b = torch.rand(size=(n, k), device="cuda").T
