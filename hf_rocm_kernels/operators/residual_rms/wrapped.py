@@ -102,7 +102,7 @@ def residual_rms(
         weight=weight,
         output=output,
         epsilon=epsilon,
-        scale=(1 / (2 * scale)),
+        scale=scale,
         mode=mode,
         num_threads=num_threads,
     )
