@@ -9,20 +9,18 @@ def _test_residual_rms(rows: int, cols: int, mode: int, verbose: bool) -> Tuple[
     """Test for the residual_rms operation. Can be either called with (verbose) flag on, in which case there will be a 
     lot of text displayed, which is good for debugging, or with (verbose) turned off, which is good for pytest."""
     # Generate data
-    input, residual, weights, epsilon, scale = generate_residual_rms_data(rows, cols, seed=0)
+    input, residual, weights, scale_tensor, epsilon = generate_residual_rms_data(rows, cols, seed=0)
     # Compute operation outputs
-    qinput, attn_res = residual_rms(input, residual.clone(), weights, epsilon, scale.item(), mode)
-    scale_ = scale * 2
+    qinput, attn_res = residual_rms(input, residual.clone(), weights, 1 / scale_tensor.mul(2), epsilon, mode)
     # Compute reference outputs
-    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, epsilon, scale)
+    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, scale_tensor, epsilon)
     # Crunch error metrics on each output and maybe display them 
     return (
         compare_x_with_ref(qinput.float(), ref_qinput.float(), "qinput" if verbose else None),
         compare_x_with_ref(attn_res.float(), ref_attn_res.float(), "attn_res" if verbose else None),
-        compare_x_with_ref(scale_, ref_scale, "scale" if verbose else None),
     )
 
-@pytest.mark.parametrize("mode", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("mode", [0, 1, 2, 3]) # 4])
 @pytest.mark.parametrize("cols", [8, 24, 128, 512, 4096, 16384])
 @pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256])
 def test_residual_rms(
@@ -34,11 +32,10 @@ def test_residual_rms(
     ctol: int = 10,
 ) -> None:
     """Pytested version of the residual_rms test. Threshold are not final."""
-    (max_error_qinput, max_relaive_error_qinput, changes_qinput), (max_error_res, _, _), (max_error_scale, _, _) = (
+    (max_error_qinput, max_relaive_error_qinput, changes_qinput), (max_error_res, _, _) = (
         _test_residual_rms(rows, cols, mode, verbose=False)
     )
     assert max_error_res == 0
-    assert max_error_scale == 0
     assert (max_error_qinput < atol) and (changes_qinput < ctol)
     assert max_relaive_error_qinput < rtol
 

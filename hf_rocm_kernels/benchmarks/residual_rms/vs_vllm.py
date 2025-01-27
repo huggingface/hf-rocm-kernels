@@ -41,11 +41,10 @@ if __name__ == "__main__":
             label=rows, 
             fn=lambda: vllm_resdual_rms(*args),
         )
-        scale = args[-1].item()
         bench.add_measure(
             header="Ours (μs)", 
             label=rows, 
-            fn=lambda: residual_rms(*args[:-1], scale),
+            fn=lambda: residual_rms(*args),
         )
 
     bench.display_table(row_header="Nb. rows")

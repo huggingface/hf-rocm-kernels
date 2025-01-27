@@ -12,8 +12,8 @@
 #define CDIV(a, b) ((a + b - 1) / (b))  // Ceiling division
 
 __global__ void _residual_rms_v2(const half* __restrict__ input, half* __restrict__ residual,
-                                 const half* __restrict__ weight, __hip_fp8_storage_t* __restrict__ output,
-                                 const float epsilon, const float scale, const int cols) {
+                                 const half* __restrict__ weight, const float* __restrict__ scale_tensor, __hip_fp8_storage_t* __restrict__ output,
+                                 const float epsilon, const int cols) {
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols + WPT * threadIdx.x;
     residual += blockIdx.x * cols + WPT * threadIdx.x;
@@ -76,6 +76,7 @@ __global__ void _residual_rms_v2(const half* __restrict__ input, half* __restric
     half residual_buffer_[WPT];
     half weight_buffer[WPT];
     __hip_fp8_storage_t fp8_buffer[WPT];
+    float scale = scale_tensor[0];
 
     residual = residual_start;
     for (int i = 0; i < iterations; i++) {
@@ -114,5 +115,5 @@ __global__ void _residual_rms_v2(const half* __restrict__ input, half* __restric
 
 #define LAUNCH_RESIDUAL_RMS_V2                                                                                       \
     (_residual_rms_v2<<<grid, block, 0, stream>>>((half*)input.data_ptr(), (half*)residual.data_ptr(),               \
-                                                  (half*)weight.data_ptr(), (__hip_fp8_storage_t*)output.data_ptr(), \
-                                                  epsilon, scale, cols))
+                                                  (half*)weight.data_ptr(), (float*)scale_tensor.data_ptr(), (__hip_fp8_storage_t*)output.data_ptr(), \
+                                                  epsilon, cols))

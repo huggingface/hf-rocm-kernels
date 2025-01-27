@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # Parameters
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     cols = 16384
-    mode = 4
+    mode = 3
 
     # Delete old figure 
     if os.path.exists("__bench__.png"):
@@ -24,8 +24,7 @@ if __name__ == "__main__":
         ns, ts = [], []
         for nthreads in tqdm([64 + i for i in range(0, 1024, 64)]):
             args = generate_residual_rms_data(rows, cols)
-            scale = args[-1].item()
-            t = bench.benchmark_fn(fn=lambda: residual_rms(*args[:-1], scale, mode, nthreads))
+            t = bench.benchmark_fn(fn=lambda: residual_rms(*args, mode, nthreads))
             ns.append(nthreads)
             ts.append(t)
         min_t = min(ts)

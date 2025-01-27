@@ -8,11 +8,12 @@
 #include "op_src/residual_rms/residual_rms_v3.cu"
 #include "op_src/residual_rms/residual_rms_v4.cu"
 
-void residual_rms(torch::Tensor& input,     // Shape: [m, n] / Layout: row-major / Dtype: fp16
-                  torch::Tensor& residual,  // Shape: [m, n] / Layout: row-major / Dtype: fp16
-                  torch::Tensor& weight,    // Shape: [m,  ] / Layout: row-major / Dtype: fp16
-                  torch::Tensor& output,    // Shape: [m, n] / Layout: row-major / Dtype: fp8
-                  double epsilon, double scale, int64_t mode,
+void residual_rms(torch::Tensor& input,        // Shape: [m, n] / Layout: row-major / Dtype: fp16
+                  torch::Tensor& residual,     // Shape: [m, n] / Layout: row-major / Dtype: fp16
+                  torch::Tensor& weight,       // Shape: [m,  ] / Layout: row-major / Dtype: fp16
+                  torch::Tensor& scale_tensor, // Shape: [1,  ] / Layout: row-major / Dtype: fp32
+                  torch::Tensor& output,       // Shape: [m, n] / Layout: row-major / Dtype: fp8
+                  double epsilon, int64_t mode,
                   int64_t num_threads) {  // TODO: add fp16 output mode
 
     // Retrieve shapes

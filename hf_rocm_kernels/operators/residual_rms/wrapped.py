@@ -5,13 +5,14 @@ from torch import Tensor
 from .binding import _residual_rms
 
 
-_HIGHEST_RESIDUAL_RMS_MODE = 1
+_HIGHEST_RESIDUAL_RMS_MODE = 3
 
 
 def residual_rms_checks(
     input: Tensor, 
     residual: Tensor, 
     weight: Tensor, 
+    scale_tensor: Tensor, 
     epsilon: float,
 ) -> None:
     # Check shapes
@@ -24,6 +25,7 @@ def residual_rms_checks(
     device = input.device
     assert device.type == "cuda", f"Expected input.device to be of type cuda, but got {device.type = } instead."
     assert residual.device == device, f"Expected {residual.device = } to be the same as {input.device = }"
+    assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {input.device = }"
     # Check layouts
     assert input.is_contiguous(), f"Expected input to be contiguous but got {input.stride() = }"
     assert residual.is_contiguous(), f"Expected residual to be contiguous but got {residual.stride() = }"
@@ -72,8 +74,8 @@ def residual_rms(
     input: Tensor, 
     residual: Tensor, 
     weight: Tensor,
+    scale_tensor: Tensor,
     epsilon: float, 
-    scale: float,
     mode: int = -1,
     num_threads: int = 0,
 ) -> Tuple[Tensor, Tensor]:
@@ -83,8 +85,8 @@ def residual_rms(
         - input: a fp16 tensor of shape (rows, cols) in row-major format
         - residual: a fp16 tensor of shape (rows, cols) in row-major format
         - weight: a fp16 tensor of shape (cols, ) in row-major format which contains the weight of the RMS norm
+        - scale_tensor: a fp32 one-item tensor to scale the output of the RMS norm before their conversion to fp8
         - epsilon: the small epsilon used inside the RMS norm to avoid division by zero
-        - scale: a float to scale the output of the RMS norm before their conversion to fp8
         - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically
             depending on tensor alignment. If a specific mode is chosen and needs tensor alignment, an error is raised
         - num_threads: the number of threads per block in the kernel. Default value is 0, which then defaults to 1024
@@ -92,7 +94,7 @@ def residual_rms(
         - an fp8 tensor of shape (rows, cols) in row-major format
         - the residual modified in place
     """
-    residual_rms_checks(input, residual, weight, epsilon)
+    residual_rms_checks(input, residual, weight, scale_tensor, epsilon)
     mode = residual_rms_choose_mode(input, residual, weight, mode)
     num_threads = infer_num_threads(input.size(0), mode, num_threads)
     output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
@@ -100,9 +102,9 @@ def residual_rms(
         input=input,
         residual=residual,
         weight=weight,
+        scale_tensor=scale_tensor,
         output=output,
         epsilon=epsilon,
-        scale=scale,
         mode=mode,
         num_threads=num_threads,
     )
