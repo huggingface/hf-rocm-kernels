@@ -10,8 +10,8 @@
 
 __global__ void _residual_rms_v0(const half* __restrict__ input, half* __restrict__ residual,
                                  const half* __restrict__ weight, const float* __restrict__ scale_tensor,
-                                 __hip_fp8_storage_t* __restrict__ output,
-                                 const float epsilon, const int cols) {
+                                 __hip_fp8_storage_t* __restrict__ output, half* __restrict__ next_buffer, 
+                                 const float epsilon, const int cols, const int buffer_cols) {
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols;
     residual += blockIdx.x * cols;
@@ -51,10 +51,16 @@ __global__ void _residual_rms_v0(const half* __restrict__ input, half* __restric
         FP8_CLAMP(x, float);
         output[idx] = __hip_cvt_float_to_fp8(x, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
     }
+
+    // Initialize next buffer
+    next_buffer += blockIdx.x * buffer_cols;
+    for (int i = threadIdx.x; i < buffer_cols; i+=blockDim.x) {
+        next_buffer[i] = 0;
+    }
 }
 
 #define LAUNCH_RESIDUAL_RMS_V0                                                                                       \
     (_residual_rms_v0<<<grid, block, 0, stream>>>((half*)input.data_ptr(), (half*)residual.data_ptr(),               \
                                                   (half*)weight.data_ptr(), (float*)scale_tensor.data_ptr(),        \
                                                    (__hip_fp8_storage_t*)output.data_ptr(), \
-                                                  epsilon, cols))
+                                                   (__half*) next_buffer.data_ptr(), epsilon, cols, buffer_cols))

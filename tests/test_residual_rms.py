@@ -5,15 +5,16 @@ from hf_rocm_kernels.operators.residual_rms import residual_rms, reference_resid
 from hf_rocm_kernels.utils.testing import compare_x_with_ref
 
 
-def _test_residual_rms(rows: int, cols: int, mode: int, verbose: bool) -> Tuple[Tuple[float, float, float], ...]:
+def _test_residual_rms(rows: int, cols: int, buffer_cols: int, mode: int, verbose: bool) -> Tuple[Tuple[float, float, float], ...]:
     """Test for the residual_rms operation. Can be either called with (verbose) flag on, in which case there will be a 
     lot of text displayed, which is good for debugging, or with (verbose) turned off, which is good for pytest."""
     # Generate data
-    input, residual, weights, scale_tensor, epsilon = generate_residual_rms_data(rows, cols, seed=0)
+    input, residual, weights, scale_tensor, epsilon, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, seed=0)
     # Compute operation outputs
-    qinput, attn_res = residual_rms(input, residual.clone(), weights, 1 / scale_tensor.mul(2), epsilon, mode)
+    qinput, attn_res = residual_rms(input, residual.clone(), weights, 1 / scale_tensor.mul(2), epsilon, next_buffer, mode)
+    assert (next_buffer is None) or (next_buffer.sum() == 0)
     # Compute reference outputs
-    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, scale_tensor, epsilon)
+    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, scale_tensor, epsilon, next_buffer)
     # Crunch error metrics on each output and maybe display them 
     return (
         compare_x_with_ref(qinput.float(), ref_qinput.float(), "qinput" if verbose else None),
@@ -21,11 +22,13 @@ def _test_residual_rms(rows: int, cols: int, mode: int, verbose: bool) -> Tuple[
     )
 
 @pytest.mark.parametrize("mode", [0, 1, 2, 3]) # 4])
+@pytest.mark.parametrize("buffer_cols", [0, 1024, 6656, 13312])
 @pytest.mark.parametrize("cols", [8, 24, 128, 512, 4096, 16384])
 @pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256])
 def test_residual_rms(
     rows: int, 
     cols: int,
+    buffer_cols: int,
     mode: int,
     atol: float = 2e-2,
     rtol: float = 0.15,
@@ -33,7 +36,7 @@ def test_residual_rms(
 ) -> None:
     """Pytested version of the residual_rms test. Threshold are not final."""
     (max_error_qinput, max_relaive_error_qinput, changes_qinput), (max_error_res, _, _) = (
-        _test_residual_rms(rows, cols, mode, verbose=False)
+        _test_residual_rms(rows, cols, buffer_cols, mode, verbose=False)
     )
     assert max_error_res == 0
     assert (max_error_qinput < atol) and (changes_qinput < ctol)

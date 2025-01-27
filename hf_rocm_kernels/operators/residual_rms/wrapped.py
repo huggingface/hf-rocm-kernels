@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 import torch
 from torch import Tensor
 
@@ -12,8 +12,9 @@ def residual_rms_checks(
     input: Tensor, 
     residual: Tensor, 
     weight: Tensor, 
-    scale_tensor: Tensor, 
+    scale_tensor: Tensor,
     epsilon: float,
+    next_buffer: Tensor,
 ) -> None:
     # Check shapes
     assert input.dim() == 2, f"Expected input to have 2 dimensions but got {input.dim() = } instead."
@@ -26,6 +27,7 @@ def residual_rms_checks(
     assert device.type == "cuda", f"Expected input.device to be of type cuda, but got {device.type = } instead."
     assert residual.device == device, f"Expected {residual.device = } to be the same as {input.device = }"
     assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {input.device = }"
+    assert next_buffer.device == device, f"Expected {next_buffer.device = } to be the same as {input.device = }"
     # Check layouts
     assert input.is_contiguous(), f"Expected input to be contiguous but got {input.stride() = }"
     assert residual.is_contiguous(), f"Expected residual to be contiguous but got {residual.stride() = }"
@@ -37,9 +39,10 @@ def residual_rms_choose_mode(
     input: Tensor, 
     residual: Tensor, 
     weight: Tensor, 
+    next_buffer: Tensor, 
     mode: int,
 ) -> int:
-    cols_is_multiple_of_8 = input.size(1) % 8 == 0
+    cols_is_multiple_of_8 = (input.size(1) % 8 == 0) and (next_buffer.size(1) % 8 == 0)
     tensors_are_16b_aligned = all([x.data_ptr() % 16 == 0 for x in [input, residual, weight]])
     if mode == -1:
         mode = _HIGHEST_RESIDUAL_RMS_MODE if (tensors_are_16b_aligned and cols_is_multiple_of_8) else 0
@@ -67,7 +70,7 @@ def infer_num_threads(rows: int, mode: int, num_threads: int) -> int:
         return 1024
     elif rows <= 128:
         return 768
-    return 256
+    return 384
 
 
 def residual_rms(
@@ -76,6 +79,7 @@ def residual_rms(
     weight: Tensor,
     scale_tensor: Tensor,
     epsilon: float, 
+    next_buffer: Optional[Tensor] = None,
     mode: int = -1,
     num_threads: int = 0,
 ) -> Tuple[Tensor, Tensor]:
@@ -87,6 +91,7 @@ def residual_rms(
         - weight: a fp16 tensor of shape (cols, ) in row-major format which contains the weight of the RMS norm
         - scale_tensor: a fp32 one-item tensor to scale the output of the RMS norm before their conversion to fp8
         - epsilon: the small epsilon used inside the RMS norm to avoid division by zero
+        - next_buffer: an optional tensor of shape (rows, .) to initialize to zero
         - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically
             depending on tensor alignment. If a specific mode is chosen and needs tensor alignment, an error is raised
         - num_threads: the number of threads per block in the kernel. Default value is 0, which then defaults to 1024
@@ -94,8 +99,11 @@ def residual_rms(
         - an fp8 tensor of shape (rows, cols) in row-major format
         - the residual modified in place
     """
-    residual_rms_checks(input, residual, weight, scale_tensor, epsilon)
-    mode = residual_rms_choose_mode(input, residual, weight, mode)
+    if next_buffer is None:
+        next_buffer = torch.empty(size=(input.size(0), 0), device=input.device, dtype=torch.float16)
+
+    residual_rms_checks(input, residual, weight, scale_tensor, epsilon, next_buffer)
+    mode = residual_rms_choose_mode(input, residual, weight, next_buffer, mode)
     num_threads = infer_num_threads(input.size(0), mode, num_threads)
     output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
     _residual_rms(
@@ -103,8 +111,9 @@ def residual_rms(
         residual=residual,
         weight=weight,
         scale_tensor=scale_tensor,
-        output=output,
         epsilon=epsilon,
+        output=output,
+        next_buffer=next_buffer,
         mode=mode,
         num_threads=num_threads,
     )

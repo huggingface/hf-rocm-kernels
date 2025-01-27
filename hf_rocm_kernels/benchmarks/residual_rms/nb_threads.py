@@ -12,6 +12,7 @@ if __name__ == "__main__":
     # Parameters
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     cols = 16384
+    buffer_cols = 0
     mode = 3
 
     # Delete old figure 
