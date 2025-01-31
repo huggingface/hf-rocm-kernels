@@ -1,6 +1,6 @@
 import torch
 from typing import Callable, Dict
-from triton.testing import do_bench_cudagraph
+from triton.testing import do_bench, do_bench_cudagraph
 import tabulate
 import warnings
 import itertools

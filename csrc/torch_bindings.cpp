@@ -27,6 +27,16 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
         "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor scale_tensor, float epsilon, Tensor! output, "
         "Tensor! next_buffer, int mode, int num_threads) -> ()");
     ops.impl("residual_rms", torch::kCUDA, &residual_rms);
+
+    // Swiglu
+    ops.def(
+        "swiglu(Tensor gate_up_proj, Tensor scale_tensor, Tensor! swiglu_out, Tensor! next_buffer, int mode) -> ()");
+    ops.impl("swiglu", torch::kCUDA, &swiglu);
+
+    // // Skinny GEMM
+    // ops.def(
+    //     "skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
+    // ops.impl("skinny_gemm", torch::kCUDA, &skinny_gemm);
 }
 
 REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
