@@ -33,10 +33,10 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
         "swiglu(Tensor gate_up_proj, Tensor scale_tensor, Tensor! swiglu_out, Tensor! next_buffer, int mode) -> ()");
     ops.impl("swiglu", torch::kCUDA, &swiglu);
 
-    // // Skinny GEMM
-    // ops.def(
-    //     "skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
-    // ops.impl("skinny_gemm", torch::kCUDA, &skinny_gemm);
+    // Skinny GEMM
+    ops.def(
+        "skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
+    ops.impl("skinny_gemm", torch::kCUDA, &skinny_gemm);
 }
 
 REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
