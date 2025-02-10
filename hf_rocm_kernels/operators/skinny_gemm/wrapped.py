@@ -12,7 +12,7 @@ def skinny_gemm_checks(
     output: Tensor,
 ) -> None:
     # Temporary restrictions (TODO)
-    assert skinny_a.size(0) <= 8, f"Right now, {skinny_a.size(0) = } must be below 8."
+    assert skinny_a.size(0) <= 16, f"Right now, {skinny_a.size(0) = } must be below 16."
     # Check shapes
     assert skinny_a.dim() == 2, f"Expected skinny_a to have 2 dimensions but got {skinny_a.dim() = } instead."
     assert skinny_a.size(1) == b.size(0), f"Expected {skinny_a.size(1) = } and {b.size(0) = } to be the same."
