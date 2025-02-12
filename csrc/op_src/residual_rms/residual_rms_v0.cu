@@ -41,13 +41,13 @@ __global__ void _residual_rms_v0(const half* __restrict__ input, half* __restric
     __syncthreads();
 
     // Normalize and convert
-    float scale = scale_tensor[0];
+    float inv_scale = 1 / scale_tensor[0];
     for (int idx = threadIdx.x; idx < cols; idx += blockDim.x) {
         float x = (float)residual[idx];
         half y = (half)(x * shared_normalizer);
         y = (y * weight[idx]);
         x = (float)y;
-        x *= scale;
+        x *= inv_scale;
         FP8_CLAMP(x, float);
         output[idx] = __hip_cvt_float_to_fp8(x, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
     }

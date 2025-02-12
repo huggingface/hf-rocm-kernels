@@ -78,7 +78,7 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
     __half2 residual_buffer_[WPT / 2];
     __half2 weight_buffer[WPT / 2];
     __hip_fp8x2_storage_t fp8x2_buffer[WPT / 2];
-    float scale = scale_tensor[0];
+    float inv_scale = 1 / scale_tensor[0];
 
     residual -= iterations * loop_stride;
     for (int i = 0; i < iterations; i++) {
@@ -98,12 +98,12 @@ __global__ void _residual_rms_v4(const __half2* __restrict__ input, __half2* __r
             // .x
             tmp_float2.x = (float)residual_buffer_[j].x * shared_normalizer;
             tmp_float2.x = (float)((half)(tmp_float2.x) * weight_buffer[j].x);
-            tmp_float2.x *= scale;
+            tmp_float2.x *= inv_scale;
             FP8_CLAMP(tmp_float2.x, float);
             // .y
             tmp_float2.y = (float)residual_buffer_[j].y * shared_normalizer;
             tmp_float2.y = (float)((half)(tmp_float2.y) * weight_buffer[j].y);
-            tmp_float2.y *= scale;
+            tmp_float2.y *= inv_scale;
             FP8_CLAMP(tmp_float2.y, float);
             // convert
             fp8x2_buffer[j] = __hip_cvt_float2_to_fp8x2(tmp_float2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);

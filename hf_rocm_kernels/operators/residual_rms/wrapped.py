@@ -89,7 +89,7 @@ def residual_rms(
         - input: a fp16 tensor of shape (rows, cols) in row-major format
         - residual: a fp16 tensor of shape (rows, cols) in row-major format
         - weight: a fp16 tensor of shape (cols, ) in row-major format which contains the weight of the RMS norm
-        - scale_tensor: a fp32 one-item tensor to scale the output of the RMS norm before their conversion to fp8
+        - scale_tensor: a fp32 one-item tensor to divide the output of the RMS norm before their conversion to fp8
         - epsilon: the small epsilon used inside the RMS norm to avoid division by zero
         - next_buffer: an optional tensor of shape (rows, .) to initialize to zero
         - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically

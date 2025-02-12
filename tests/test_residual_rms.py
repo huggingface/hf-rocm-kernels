@@ -11,7 +11,7 @@ def _test_residual_rms(rows: int, cols: int, buffer_cols: int, mode: int, verbos
     # Generate data
     input, residual, weights, scale_tensor, epsilon, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, seed=0)
     # Compute operation outputs
-    qinput, attn_res = residual_rms(input, residual.clone(), weights, 1 / scale_tensor.mul(2), epsilon, next_buffer, mode)
+    qinput, attn_res = residual_rms(input, residual.clone(), weights, scale_tensor.mul(2), epsilon, next_buffer, mode)
     assert (next_buffer is None) or (next_buffer.sum() == 0)
     # Compute reference outputs
     ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, scale_tensor, epsilon, next_buffer)
