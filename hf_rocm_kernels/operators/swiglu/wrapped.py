@@ -70,7 +70,7 @@ def swiglu(
     the input to zero.
     Args:
         - gate_up_proj: a fp16 tensor of shape (rows, cols) in row-major format
-        - scale_tensor: a fp32 one-item tensor to scale the output of the RMS norm before their conversion to fp8
+        - scale_tensor: a fp32 one-item tensor to divide the output of the RMS norm before their conversion to fp8
         - next_buffer: an optional tensor of shape (rows, .) to initialize to zero
         - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically
             depending on tensor alignment. If a specific mode is chosen and needs tensor alignment, an error is raised

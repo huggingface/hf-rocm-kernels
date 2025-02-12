@@ -11,7 +11,7 @@ def _test_swiglu(rows: int, hidden_dim: int, buffer_cols: int, mode: int, verbos
     # Generate data
     gate_up, scale_tensor, next_buffer = generate_swiglu_data(rows, hidden_dim, buffer_cols, seed=0)
     # Compute operation outputs
-    swiglu_out = swiglu(gate_up, 1 / scale_tensor.mul(2), next_buffer, mode)
+    swiglu_out = swiglu(gate_up, scale_tensor.mul(2), next_buffer, mode)
     if next_buffer is not None:
         assert next_buffer.sum() == 0, next_buffer.sum()
     # Compute reference outputs

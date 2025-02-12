@@ -23,13 +23,13 @@ __global__ void _swiglu_v0(
 
     // Swiglu loop
     float x;
-    float scale = scale_tensor[0];
+    float inv_scale = 1 / scale_tensor[0];
 
     for (int i = threadIdx.x; i < hidden_dim; i += blockDim.x) {
         x = (float) gate_up_proj[i];
         x = x / (1 + expf(-x));
         x = x * (float) gate_up_proj[i + hidden_dim];
-        x = x * scale;
+        x = x * inv_scale;
         FP8_CLAMP(x, float);
         swiglu_out[i] = __hip_cvt_float_to_fp8(x, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
     }

@@ -31,7 +31,7 @@ __global__ void _swiglu_v1(
     const half* __restrict__ gate_ptr = gate_up_proj;
     const half* __restrict__ up_ptr = gate_up_proj + hidden_dim;
 
-    float scale = scale_tensor[0];
+    float inv_scale = 1 / scale_tensor[0];
 
     // Swiglu loop
     for (int i = elems_per_threads * threadIdx.x; i < hidden_dim; i += elems_per_threads * blockDim.x) {
@@ -53,7 +53,7 @@ __global__ void _swiglu_v1(
             f32_acc[j] = (float) gate_regs[j];
             f32_acc[j] = f32_acc[j] / (1 + expf(-f32_acc[j]));
             f32_acc[j] = f32_acc[j] * (float) up_regs[j];
-            f32_acc[j] = f32_acc[j] * scale;
+            f32_acc[j] = f32_acc[j] * inv_scale;
             f32_acc[j] = std::clamp(f32_acc[j], -448.0f, 448.0f);
         }
 
