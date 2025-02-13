@@ -13,7 +13,7 @@ void __global__ _tsr_kernel(
     const int split_k
 ) {
     // Initialize shared queue
-    __shared__ uint8 queue[2 * B_LANES * QSIZE];
+    __shared__ int queue[2 * B_LANES * QSIZE];
     if (threadIdx.x < 2 * B_LANES * QSIZE) {
         queue[threadIdx.x] = 0;
     }
@@ -26,8 +26,8 @@ void __global__ _tsr_kernel(
     // Infer index and p-state
     int role_id;
     int index;
-    uint8 p_state;
-
+    int p_state;
+    
     // A producer warp
     if (threadIdx.x < A_PRODUCERS * WARPSIZE) {
         role_id = threadIdx.x / WARPSIZE;
@@ -44,7 +44,7 @@ void __global__ _tsr_kernel(
     else {
         role_id = (threadIdx.x / WARPSIZE) - (A_PRODUCERS + B_PRODUCERS);
         index = role_id;
-        p_state = 32;
+        p_state = 1;
     }
 
     // Tiles loop
@@ -174,20 +174,20 @@ void skinny_gemm(
     // Launch kernel (branched on B_LANES)
     switch (b_lanes) {
         case 2:
-            block.x = WARPSIZE * (4 + 8 + 4);
-            _tsr_kernel<2, 4, 8, 4, 4><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
+            block.x = WARPSIZE * (3 + 8 + 4);
+            _tsr_kernel<2, 3, 8, 4, 5><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
             break;
         case 3:
-            block.x = WARPSIZE * (2 + 6 + 3);
-            _tsr_kernel<3, 2, 6, 3, 3><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;
+            block.x = WARPSIZE * (3 + 5 + 2); 
+            _tsr_kernel<3, 3, 5, 2, 4><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
+            break; // 8_13312_16384:57.54
         case 4:
             block.x = WARPSIZE * (2 + 6 + 3);
             _tsr_kernel<4, 2, 6, 3, 3><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;
+            break; // 8_16384_6656:29.5
         case 5:
-            block.x = WARPSIZE * (2 + 9 + 2);
-            _tsr_kernel<5, 2, 9, 2, 2><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
+            block.x = WARPSIZE * (2 + 6 + 2);
+            _tsr_kernel<5, 2, 6, 2, 2><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
             break;
         default:
             break;

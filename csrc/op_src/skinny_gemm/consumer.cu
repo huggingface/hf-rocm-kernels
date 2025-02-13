@@ -32,9 +32,9 @@ void __device__ _tsr_consumer(
     fp8* B_buffer,
     half* D,
     float scale,
-    uint8* queue,
+    int* queue,
     int &index,
-    uint8 &p_state,
+    int &p_state,
     int &role_id,
     const int n,
     const int dropped_rows,
@@ -80,7 +80,7 @@ void __device__ _tsr_consumer(
             consumer_smem_to_reg8(A_offs_buff + (op * OP_M * OP_K), reg_A[op]);
         }
         // Mark A buffer as consumed
-        queue[2 * B_LANES * index] = p_state + 32;
+        queue[2 * B_LANES * index] = p_state + 1;
 
         // Go through each lanes
         #pragma unroll
@@ -96,7 +96,7 @@ void __device__ _tsr_consumer(
                 consumer_smem_to_reg16(B_offs_buff + (lane * OP_N * WARPTILE_K) + (op * OP_N * OP_K), reg_B[op]);
             }
             // Mark B buffer as consumed
-            queue[2 * (B_LANES * index + lane) + 1] = p_state + 32;
+            queue[2 * (B_LANES * index + lane) + 1] = p_state + 1;
 
             // Consume registers
             #pragma unroll
@@ -113,7 +113,7 @@ void __device__ _tsr_consumer(
 
         // Update index
         index += CONSUMERS;
-        p_state = (index >= QSIZE) ? p_state + 64 : p_state;
+        p_state = (index >= QSIZE) ? (p_state + 2) : p_state;
         b += CONSUMERS;
     }
 
@@ -157,18 +157,14 @@ void __device__ _tsr_consumer(
 
     // Out lane by lane
     __half2 x;
-
     #pragma unroll
     for (int i = 0; i < B_LANES; i++) {
-        
-        // Form the packed f16
         x.x = reg_D[i][0];
         x.y = reg_D[i][1];
-
-        asm volatile(
-            "global_atomic_pk_add_f16 %0, %1, off\n\t" : : "v"(&D_[i * OP_N / 2]), "v"(x)
-        );
+        asm volatile("global_atomic_pk_add_f16 %0, %1, off\n\t" : : "v"(&D_[i * OP_N / 2]), "v"(x));
     }
+
+    // TODO: add non atomic path if split-K == 1
 
     // Disabled: if D is of type float
     // // Relocate on D
