@@ -9,9 +9,7 @@ void swiglu(torch::Tensor& gate_up_proj,  // Shape: [m, 2*n] / Layout: row-major
             torch::Tensor& scale_tensor,  // Shape: [1,    ] / Layout: row-major / Dtype: fp32
             torch::Tensor& swiglu_out,    // Shape: [m,   n] / Layout: row-major / Dtype: fp8
             torch::Tensor& next_buffer,   // Shape: [m,   o] / Layout: dont-care / Dtype: fp16
-            int64_t mode
-) {
-
+            int64_t mode) {
     // Retrieve shapes
     const int rows = gate_up_proj.size(0);
     const int hidden_dim = gate_up_proj.size(1) / 2;
@@ -28,22 +26,14 @@ void swiglu(torch::Tensor& gate_up_proj,  // Shape: [m, 2*n] / Layout: row-major
     // Launch kernel
     switch (mode) {
         case 1:
-            _swiglu_v1<<<grid, block, 0, stream>>>(
-                (half*)                gate_up_proj.data_ptr(), 
-                (float*)               scale_tensor.data_ptr(),
-                (__hip_fp8_storage_t*) swiglu_out.data_ptr(), 
-                (half*)                next_buffer.data_ptr(), 
-                hidden_dim, buffer_cols
-            );
+            _swiglu_v1<<<grid, block, 0, stream>>>((half*)gate_up_proj.data_ptr(), (float*)scale_tensor.data_ptr(),
+                                                   (__hip_fp8_storage_t*)swiglu_out.data_ptr(),
+                                                   (half*)next_buffer.data_ptr(), hidden_dim, buffer_cols);
             break;
         default:
-            _swiglu_v0<<<grid, block, 0, stream>>>(
-                (half*)                gate_up_proj.data_ptr(), 
-                (float*)               scale_tensor.data_ptr(),
-                (__hip_fp8_storage_t*) swiglu_out.data_ptr(), 
-                (half*)                next_buffer.data_ptr(), 
-                hidden_dim, buffer_cols
-            );
+            _swiglu_v0<<<grid, block, 0, stream>>>((half*)gate_up_proj.data_ptr(), (float*)scale_tensor.data_ptr(),
+                                                   (__hip_fp8_storage_t*)swiglu_out.data_ptr(),
+                                                   (half*)next_buffer.data_ptr(), hidden_dim, buffer_cols);
             break;
     }
 }
