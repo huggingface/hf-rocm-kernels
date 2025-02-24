@@ -26,7 +26,8 @@ def residual_rms_checks(
     device = input.device
     assert device.type == "cuda", f"Expected input.device to be of type cuda, but got {device.type = } instead."
     assert residual.device == device, f"Expected {residual.device = } to be the same as {input.device = }"
-    assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {input.device = }"
+    if scale_tensor is not None:
+        assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {input.device = }"
     assert next_buffer.device == device, f"Expected {next_buffer.device = } to be the same as {input.device = }"
     # Check layouts
     assert input.is_contiguous(), f"Expected input to be contiguous but got {input.stride() = }"
@@ -55,16 +56,13 @@ def residual_rms_choose_mode(
     return mode
 
 
-def infer_num_threads(rows: int, mode: int, num_threads: int) -> int:
+def infer_num_threads(rows: int, num_threads: int) -> int:
     # Error case
     if num_threads < 0 or num_threads > 1024:
         raise ValueError(f"{num_threads = } is not between 0 and 1024")
     # Case: num_threads was specified
     elif num_threads != 0:
         return num_threads
-    # Case: mode == 0, ie. not vectorized mode
-    if mode == 0:
-        return 1024 
     # Otherwise, we branch upon the number of rows
     if rows <= 32:
         return 1024
@@ -77,11 +75,11 @@ def residual_rms(
     input: Tensor, 
     residual: Tensor, 
     weight: Tensor,
-    scale_tensor: Tensor,
     epsilon: float, 
+    scale_tensor: Optional[Tensor] = None,
     next_buffer: Optional[Tensor] = None,
-    mode: int = -1,
     num_threads: int = 0,
+    force_pointwise: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Kernel that fuses a residual connection, an RMS normalization and a conversion to fp8. The resdiual argument is
     modified inplace (residual <- input + residual).
@@ -89,11 +87,10 @@ def residual_rms(
         - input: a fp16 tensor of shape (rows, cols) in row-major format
         - residual: a fp16 tensor of shape (rows, cols) in row-major format
         - weight: a fp16 tensor of shape (cols, ) in row-major format which contains the weight of the RMS norm
-        - scale_tensor: a fp32 one-item tensor to divide the output of the RMS norm before their conversion to fp8
         - epsilon: the small epsilon used inside the RMS norm to avoid division by zero
-        - next_buffer: an optional tensor of shape (rows, .) to initialize to zero
-        - mode: the dispatch mode used for the C++ operation. Default value is -1, which sets the mode automatically
-            depending on tensor alignment. If a specific mode is chosen and needs tensor alignment, an error is raised
+        - scale_tensor: a fp32 one-item tensor to divide the output of the RMS norm before their conversion to fp8. If
+            set to None, then the output dtype is fp16
+        - next_buffer: an optional tensor of shape (rows, .) to initialize to zero if the output dtype in fp8
         - num_threads: the number of threads per block in the kernel. Default value is 0, which then defaults to 1024
     Outputs:
         - an fp8 tensor of shape (rows, cols) in row-major format
@@ -103,9 +100,12 @@ def residual_rms(
         next_buffer = torch.empty(size=(input.size(0), 0), device=input.device, dtype=torch.float16)
 
     residual_rms_checks(input, residual, weight, scale_tensor, epsilon, next_buffer)
-    mode = residual_rms_choose_mode(input, residual, weight, next_buffer, mode)
-    num_threads = infer_num_threads(input.size(0), mode, num_threads)
-    output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
+    num_threads = infer_num_threads(input.size(0), num_threads)
+    output = torch.empty(
+        size=input.shape, 
+        dtype=torch.float16 if scale_tensor is None else torch.float8_e4m3fnuz, 
+        device=input.device,
+    )
     _residual_rms(
         input=input,
         residual=residual,
@@ -114,7 +114,7 @@ def residual_rms(
         epsilon=epsilon,
         output=output,
         next_buffer=next_buffer,
-        mode=mode,
         num_threads=num_threads,
+        force_pointwise=force_pointwise,
     )
     return output, residual

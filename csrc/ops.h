@@ -8,7 +8,8 @@
 void increment(torch::Tensor& x);
 
 void residual_rms(torch::Tensor& input, torch::Tensor& residual, torch::Tensor& weight, torch::Tensor& scale_tensor, 
-                  double epsilon, torch::Tensor& output, torch::Tensor& next_buffer, int64_t mode, int64_t num_threads);
+                  double epsilon, torch::Tensor& output, torch::Tensor& next_buffer, int64_t num_threads, 
+                  bool force_pointwise);
 
 void swiglu(torch::Tensor& gate_up_proj, torch::Tensor& swiglu_out, torch::Tensor& scale_tensor, 
             torch::Tensor& next_buffer, int64_t mode);

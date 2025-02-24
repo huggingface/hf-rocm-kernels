@@ -18,12 +18,16 @@ if __name__ == "__main__":
             label=rows, 
             fn=lambda: reference_residual_rms(*args),
         )
-        for mode in [0, 1, 2, 3, 4]:
-            bench.add_measure(
-                header=f"Mode {mode} (μs)", 
-                label=rows, 
-                fn=lambda: residual_rms(*args, mode=mode),
-            )
+        bench.add_measure(
+            header="Pointwise (μs)", 
+            label=rows, 
+            fn=lambda: residual_rms(*args, force_pointwise=True),
+        )
+        bench.add_measure(
+            header="Vectorized (μs)", 
+            label=rows, 
+            fn=lambda: residual_rms(*args, force_pointwise=False),
+        )
 
     bench.display_table(row_header="Nb. rows")
 

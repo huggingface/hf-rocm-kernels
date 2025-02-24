@@ -8,8 +8,8 @@ def reference_residual_rms(
     input: Tensor,
     residual: Tensor,
     weight: Tensor,
-    scale_tensor: Tensor,
     epsilon: float,
+    scale_tensor: Optional[Tensor],
     next_buffer: Optional[Tensor],
 ) -> Tuple[Tensor, Tensor, float]:
     """Reference for the residual_rms operation. Check its docstring for more details, the only difference here is that
@@ -25,11 +25,14 @@ def reference_residual_rms(
     if weight.dtype in [torch.float16, torch.bfloat16]:
         input = input.to(weight.dtype)
     input = weight * input
-    # Convert to fp8
-    qinput, scale_tensor = fp8_quantize(input, scale_tensor)
-    # Zero-init the next buffer
-    if next_buffer is not None:
-        next_buffer.fill_(0)
+    if scale_tensor is not None:
+        # Convert to fp8
+        qinput, scale_tensor = fp8_quantize(input, scale_tensor)
+        # Zero-init the next buffer
+        if next_buffer is not None:
+            next_buffer.fill_(0)
+    else:
+        qinput = input
     return qinput, residual, scale_tensor
 
 
@@ -40,7 +43,7 @@ def reference_rms(x: Tensor, eps: float) -> Tensor:
 
 
 def generate_residual_rms_data(
-    rows: int, cols: int, buffer_cols: int = 0, seed: Optional[int] = None,
+    rows: int, cols: int, buffer_cols: int = 0, dtype: torch.dtype = torch.float16, seed: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor, float, Optional[Tensor]]:
     """Generates random inputs for the residual_rms operation. The generated input's shape is determined by (rows) and 
     (cols), and one can pass a (seed) to ensure repeatability."""
@@ -50,6 +53,9 @@ def generate_residual_rms_data(
     residual = torch.normal(0, 1, size=(rows, cols), device="cuda", dtype=torch.float16)
     weights = torch.normal(0, 1, size=(cols, ), device="cuda", dtype=torch.float16)
     epsilon = torch.rand(size=(1,)).add(1).mul(1e-5).item()
-    scale_tensor = torch.rand(size=(1,), device="cuda", dtype=torch.float32).mul(2).add(1)
+    if dtype == torch.float8_e4m3fnuz:
+        scale_tensor = torch.rand(size=(1,), device="cuda", dtype=torch.float32).mul(2).add(1)
+    else:
+        scale_tensor = None
     next_buffer = None if buffer_cols == 0 else torch.empty((rows, buffer_cols), device="cuda", dtype=torch.float16)
-    return input, residual, weights, scale_tensor, epsilon, next_buffer
+    return input, residual, weights, epsilon, scale_tensor, next_buffer

@@ -12,9 +12,9 @@ def _residual_rms(
     epsilon: float, 
     output: Tensor, 
     next_buffer: Tensor, 
-    mode: int,
     num_threads: int,
+    force_pointwise: bool,
 ) -> None:
     torch.ops._HFRK_C.residual_rms(
-        input, residual, weight, scale_tensor, epsilon, output, next_buffer, mode, num_threads
+        input, residual, weight, scale_tensor, epsilon, output, next_buffer, num_threads, force_pointwise
     )
