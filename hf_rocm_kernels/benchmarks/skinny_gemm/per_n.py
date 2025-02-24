@@ -1,6 +1,4 @@
 from tqdm import tqdm
-import torch
-from torch import Tensor
 import matplotlib.pyplot as plt
 
 from hf_rocm_kernels.utils.benchmarking import Bench

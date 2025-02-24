@@ -26,16 +26,28 @@ def benchmark_skinny_gemm(
 
     # If split_k == 0, then we are timing the torch function
     if split_k == 0:
-        fn = lambda i: torch._scaled_mm(
-            input=input, mat2=q_weights[i], scale_a=input_scale, scale_b=scales[i], out_dtype=torch.float16, out=output
-        )
+        def fn(i: int) -> None:
+            torch._scaled_mm(
+                input=input,
+                mat2=q_weights[i],
+                scale_a=input_scale,
+                scale_b=scales[i],
+                out_dtype=torch.float16,
+                out=output
+            )
         # To initialize tunable ops
         fn(0)
     # Otherwise, we are timing skinny_gemm
     else:
-        fn = lambda i: skinny_gemm(
-            skinny_a=input, b=q_weights[i], scale_tensor=scales[i], split_k=split_k,  b_lanes=b_lanes, output=output
-        )
+        def fn(i: int) -> None:
+            skinny_gemm(
+                skinny_a=input,
+                b=q_weights[i],
+                scale_tensor=scales[i],
+                split_k=split_k,
+                b_lanes=b_lanes,
+                output=output
+            )
     
     # Create a side-stream to benchmark in
     stream = torch.cuda.Stream(device)

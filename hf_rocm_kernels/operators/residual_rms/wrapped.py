@@ -105,6 +105,7 @@ def residual_rms(
     if scale_tensor is not None:
         output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
     else:
+        # TODO: here, we could use input as the output tensor
         output = torch.empty(size=input.shape, dtype=torch.float16, device=input.device)
     _residual_rms(
         input=input,
