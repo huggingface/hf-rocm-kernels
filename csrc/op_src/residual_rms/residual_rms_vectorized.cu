@@ -46,7 +46,7 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
             residual_buffer[j] += input_buffer[j];
-            float float_res = (float) residual_buffer[j];
+            float float_res = (float)residual_buffer[j];
             variance += float_res * float_res;
             // asm volatile(
             //     "v_pk_add_f16 %0, %2, %3\n\t"
@@ -106,15 +106,13 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 // Compute and fill buffer
 #pragma unroll
         for (int j = 0; j < elems_per_load / 2; j++) {
-
             // Output is fp8
             if constexpr (std::is_same_v<T, __hip_fp8x2_storage_t>) {
-
                 tmp_float2.x = (float)residual_buffer_[2 * j] * shared_normalizer;
                 tmp_float2.x = (float)((half)(tmp_float2.x) * weight_buffer[2 * j]);
                 tmp_float2.x *= inv_scale;
                 FP8_CLAMP(tmp_float2.x, float);
-                
+
                 tmp_float2.y = (float)residual_buffer_[2 * j + 1] * shared_normalizer;
                 tmp_float2.y = (float)((half)(tmp_float2.y) * weight_buffer[2 * j + 1]);
                 tmp_float2.y *= inv_scale;
@@ -125,10 +123,10 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 
             // Output is fp16
             if constexpr (std::is_same_v<T, half2>) {
-                tmp_float2.x = (float)residual_buffer_[2 * j    ];
+                tmp_float2.x = (float)residual_buffer_[2 * j];
                 tmp_float2.y = (float)residual_buffer_[2 * j + 1];
                 tmp_float2 *= shared_normalizer;
-                half2 tmp = {(half) tmp_float2.x, (half) tmp_float2.y};
+                half2 tmp = {(half)tmp_float2.x, (half)tmp_float2.y};
                 tmp *= reinterpret_cast<const half2*>(weight_buffer)[j];
                 output_buffer[j] = tmp;
             }
@@ -157,5 +155,3 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         }
     }
 }
-
-

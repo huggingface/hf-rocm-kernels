@@ -24,8 +24,8 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
 
     // Residual + RMS operator
     ops.def(
-        "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor scale_tensor, float epsilon, Tensor! output, "
-        "Tensor! next_buffer, int num_threads, bool force_pointwise) -> ()");
+        "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor scale_tensor, float epsilon, Tensor! "
+        "output, Tensor! next_buffer, int num_threads, bool force_pointwise) -> ()");
     ops.impl("residual_rms", torch::kCUDA, &residual_rms);
 
     // Swiglu
@@ -34,8 +34,7 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     ops.impl("swiglu", torch::kCUDA, &swiglu);
 
     // Skinny GEMM
-    ops.def(
-        "skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
+    ops.def("skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
     ops.impl("skinny_gemm", torch::kCUDA, &skinny_gemm);
 }
 
