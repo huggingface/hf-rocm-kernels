@@ -12,15 +12,36 @@ def _test_residual_rms(
     """Test for the residual_rms operation. Can be either called with (verbose) flag on, in which case there will be a 
     lot of text displayed, which is good for debugging, or with (verbose) turned off, which is good for pytest."""
     # Generate data
-    input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype, seed=0)
+    input, residual, weight, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(
+        rows=rows, 
+        cols=cols, 
+        buffer_cols=buffer_cols, 
+        dtype=dtype, 
+        seed=0
+    )
     # Compute operation outputs
-    qinput, attn_res = residual_rms(input, residual.clone(), weights, epsilon, scale_tensor, next_buffer, force_pointwise=force_pointwise)
-    if qinput.dtype != torch.float16:
-        assert (next_buffer is None) or (next_buffer.sum() == 0)
+    qinput, attn_res = residual_rms(
+        input=input.clone(), 
+        residual=residual.clone(), 
+        weight=weight, 
+        epsilon=epsilon,
+        scale_tensor=scale_tensor, 
+        next_buffer=next_buffer, 
+        force_pointwise=force_pointwise
+    )
+    # Check next buffer if there is one
+    if next_buffer is not None:
+        assert next_buffer.sum() == 0, next_buffer
     # Compute reference outputs
-    scale_tensor = scale_tensor.div(2) if scale_tensor is not None else scale_tensor
-    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(input, residual, weights, epsilon, scale_tensor, next_buffer)
-    # Crunch error metrics on each output and maybe display them 
+    ref_qinput, ref_attn_res, ref_scale = reference_residual_rms(
+        input=input, 
+        residual=residual, 
+        weight=weight, 
+        epsilon=epsilon, 
+        scale_tensor=(None if scale_tensor is None else scale_tensor.div(2)), 
+        next_buffer=next_buffer
+    )
+    # Crunch error metrics on each output and maybe display them
     return (
         compare_x_with_ref(qinput.float(), ref_qinput.float(), "qinput" if verbose else None),
         compare_x_with_ref(attn_res.float(), ref_attn_res.float(), "attn_res" if verbose else None),
@@ -47,18 +68,19 @@ def test_residual_rms(
     (max_error_qinput, max_relaive_error_qinput, changes_qinput), (max_error_res, _, _) = (
         _test_residual_rms(rows, cols, buffer_cols, dtype, force_pointwise, verbose=False)
     )
-    assert max_error_res == 0, "Residual are not equal"
-    assert max_error_qinput < atol, "Absolute tolerance is not respected"
+    assert max_error_res == 0, f"Residual are not equal: {max_error_res = }"
+    assert max_error_qinput < atol, f"Absolute tolerance is not respected: {max_error_qinput = } >= {atol}"
     percent_changes = 100 * changes_qinput / (rows * cols)
-    assert percent_changes < ctol, "Too many changes"
-    assert max_relaive_error_qinput < rtol, "Relative tolerance is not respected"
+    assert percent_changes < ctol, f"Too many changes: {percent_changes = } >= {ctol}"
+    assert max_relaive_error_qinput < rtol, f"Relative tolerance is not met: {max_relaive_error_qinput = } >= {rtol}"
 
 
 if __name__ == "__main__":
 
-    nb_toks = 64
-    hidden_size = 16384
+    nb_toks = 1
+    hidden_size = 8
     dtype = torch.float8_e4m3fnuz
+    buffer_cols = 32
     force_pointwise = False
 
-    _test_residual_rms(nb_toks, hidden_size, 0, dtype, force_pointwise, verbose=True)
+    _test_residual_rms(nb_toks, hidden_size, buffer_cols, dtype, force_pointwise, verbose=True)

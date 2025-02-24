@@ -45,12 +45,15 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         // Add everything in the residual buffer and accumulate variance
 #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
-            asm volatile(
-                "v_pk_add_f16 %0, %2, %3\n\t"
-                "v_dot2c_f32_f16 %1, %2, %2"
-                : "=v"(residual_buffer[j]), "=v"(variance)
-                : "0"(residual_buffer[j]), "v"(input_buffer[j])
-            );
+            residual_buffer[j] += input_buffer[j];
+            float float_res = (float) residual_buffer[j];
+            variance += float_res * float_res;
+            // asm volatile(
+            //     "v_pk_add_f16 %0, %2, %3\n\t"
+            //     "v_dot2c_f32_f16 %1, %2, %2"
+            //     : "=v"(residual_buffer[j]), "=v"(variance)
+            //     : "0"(residual_buffer[j]), "v"(input_buffer[j])
+            // );
         }
 
         // 128-bits store
@@ -146,9 +149,9 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
     // Initialize next buffer TODO: add this as a template (eventualy w/ vector granularity)
     if constexpr (clean_next_buffer) {
         next_buffer += blockIdx.x * buffer_cols;
-        for (int i = 8 * threadIdx.x; i < buffer_cols; i += 8 * blockDim.x) {
+        for (int i = elems_per_load * threadIdx.x; i < buffer_cols; i += elems_per_load * blockDim.x) {
 #pragma unroll
-            for (int j = 0; j < 8; j++) {
+            for (int j = 0; j < elems_per_load; j++) {
                 next_buffer[i + j] = 0;
             }
         }

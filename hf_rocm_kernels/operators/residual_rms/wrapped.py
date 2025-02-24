@@ -101,11 +101,11 @@ def residual_rms(
 
     residual_rms_checks(input, residual, weight, scale_tensor, epsilon, next_buffer)
     num_threads = infer_num_threads(input.size(0), num_threads)
-    output = torch.empty(
-        size=input.shape, 
-        dtype=torch.float16 if scale_tensor is None else torch.float8_e4m3fnuz, 
-        device=input.device,
-    )
+
+    if scale_tensor is not None:
+        output = torch.empty(size=input.shape, dtype=torch.float8_e4m3fnuz, device=input.device)
+    else:
+        output = torch.empty(size=input.shape, dtype=torch.float16, device=input.device)
     _residual_rms(
         input=input,
         residual=residual,

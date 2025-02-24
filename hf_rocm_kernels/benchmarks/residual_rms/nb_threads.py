@@ -11,10 +11,10 @@ if __name__ == "__main__":
     bench = Bench()
 
     # Parameters
-    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048]
     cols = 16384
     buffer_cols = 0
-    dtype = torch.float16
+    dtype = torch.float8_e4m3fnuz
 
     # Delete old figure 
     if os.path.exists("__bench__.png"):
