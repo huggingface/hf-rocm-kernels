@@ -9,11 +9,11 @@
 #include <torch/all.h>
 using fp8 = __hip_fp8_storage_t;
 using fp8_4 = int;
-using fp8x8 = __attribute__( (__vector_size__(8 * sizeof(fp8)) )) fp8;
-using fp8x16 = __attribute__( (__vector_size__(16 * sizeof(fp8)) )) fp8;
-using fp8_4x2 = __attribute__( (__vector_size__(2 * sizeof(int)) )) int;
-using fp8_4x4 = __attribute__( (__vector_size__(4 * sizeof(int)) )) int;
-using f32x4 = __attribute__( (__vector_size__(4 * sizeof(float)) )) float;
+using fp8x8 = __attribute__((__vector_size__(8 * sizeof(fp8)))) fp8;
+using fp8x16 = __attribute__((__vector_size__(16 * sizeof(fp8)))) fp8;
+using fp8_4x2 = __attribute__((__vector_size__(2 * sizeof(int)))) int;
+using fp8_4x4 = __attribute__((__vector_size__(4 * sizeof(int)))) int;
+using f32x4 = __attribute__((__vector_size__(4 * sizeof(float)))) float;
 using uint8 = unsigned char;
 using uint16 = unsigned short;
 using uint32 = unsigned int;
