@@ -79,7 +79,7 @@ def residual_rms(
     scale_tensor: Optional[Tensor] = None,
     next_buffer: Optional[Tensor] = None,
     num_threads: int = 0,
-    force_pointwise: bool = False,
+    force_scalar: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Kernel that fuses a residual connection, an RMS normalization and a conversion to fp8. The resdiual argument is
     modified inplace (residual <- input + residual).
@@ -116,6 +116,6 @@ def residual_rms(
         output=output,
         next_buffer=next_buffer,
         num_threads=num_threads,
-        force_pointwise=force_pointwise,
+        force_scalar=force_scalar,
     )
     return output, residual

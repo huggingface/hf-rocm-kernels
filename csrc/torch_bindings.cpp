@@ -25,7 +25,7 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     // Residual + RMS operator
     ops.def(
         "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor scale_tensor, float epsilon, Tensor! "
-        "output, Tensor! next_buffer, int num_threads, bool force_pointwise) -> ()");
+        "output, Tensor! next_buffer, int num_threads, bool force_scalar) -> ()");
     ops.impl("residual_rms", torch::kCUDA, &residual_rms);
 
     // Swiglu

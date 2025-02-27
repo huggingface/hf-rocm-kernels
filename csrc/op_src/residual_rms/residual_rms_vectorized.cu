@@ -48,6 +48,7 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             residual_buffer[j] += input_buffer[j];
             float float_res = (float)residual_buffer[j];
             variance += float_res * float_res;
+            // TODO: add support for this ASM snippet and check performance
             // asm volatile(
             //     "v_pk_add_f16 %0, %2, %3\n\t"
             //     "v_dot2c_f32_f16 %1, %2, %2"

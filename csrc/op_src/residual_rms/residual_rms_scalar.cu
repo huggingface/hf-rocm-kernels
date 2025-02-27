@@ -9,10 +9,10 @@
 #include "utils/macros.h"
 
 template <typename T, bool clean_next_buffer>
-__global__ void _residual_rms_pointwise(const half* __restrict__ input, half* __restrict__ residual,
-                                        const half* __restrict__ weight, const float* __restrict__ scale_tensor,
-                                        T* __restrict__ output, half* __restrict__ next_buffer, const float epsilon,
-                                        const int cols, const int buffer_cols) {
+__global__ void _residual_rms_scalar(const half* __restrict__ input, half* __restrict__ residual,
+                                     const half* __restrict__ weight, const float* __restrict__ scale_tensor,
+                                     T* __restrict__ output, half* __restrict__ next_buffer, const float epsilon,
+                                     const int cols, const int buffer_cols) {
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols;
     residual += blockIdx.x * cols;

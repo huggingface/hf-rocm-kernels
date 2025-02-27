@@ -38,8 +38,4 @@ void swiglu(torch::Tensor& gate_up_proj,  // Shape: [m, 2*n] / Layout: row-major
     }
 }
 
-/*
-    Versions:
-        0. non-vectorized version
-        1. vectorized version
-*/
+// TODO: reformat the dispatch as was done with RMS, with a scalar and a vectorized version

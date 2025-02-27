@@ -3,7 +3,7 @@
 #include <hip/hip_runtime.h>
 
 #include "op_src/residual_rms/residual_rms_vectorized.cu"
-#include "op_src/residual_rms/residual_rms_pointwise.cu"
+#include "op_src/residual_rms/residual_rms_scalar.cu"
 
 void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-major / Dtype: fp16
                   torch::Tensor& residual,      // Shape: [m, n] / Layout: row-major / Dtype: fp16
@@ -12,7 +12,7 @@ void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-m
                   double epsilon,
                   torch::Tensor& output,       // Shape: [m, n] / Layout: row-major / Dtype: fp8 or fp16
                   torch::Tensor& next_buffer,  // Shape: [m, o] / Layout: dont-care / Dtype: fp16
-                  int64_t num_threads, bool force_pointwise) {
+                  int64_t num_threads, bool force_scalar) {
     // Retrieve shapes
     const int rows = input.size(0);
     const int cols = input.size(1);
@@ -26,7 +26,7 @@ void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-m
 
     // Check tensors alignment
     bool vectorized_available = IS_16B_ALIGNED(input) && IS_16B_ALIGNED(residual) && IS_16B_ALIGNED(weight);
-    vectorized_available = vectorized_available && (!force_pointwise);
+    vectorized_available = vectorized_available && (!force_scalar);
 
     // Case: output is fp16
     if (output.dtype() == torch::kFloat16) {
@@ -37,7 +37,7 @@ void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-m
                 (half*)input.data_ptr(), (half*)residual.data_ptr(), (half*)weight.data_ptr(), (float*)NULL,
                 (half2*)output.data_ptr(), (half*)NULL, epsilon, cols, 0);
         } else {
-            _residual_rms_pointwise<half, false><<<grid, block, 0, stream>>>(
+            _residual_rms_scalar<half, false><<<grid, block, 0, stream>>>(
                 (half*)input.data_ptr(), (half*)residual.data_ptr(), (half*)weight.data_ptr(), (float*)NULL,
                 (half*)output.data_ptr(), (half*)NULL, epsilon, cols, 0);
         }
@@ -54,7 +54,7 @@ void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-m
                 (float*)scale_tensor.data_ptr(), (__hip_fp8x2_storage_t*)output.data_ptr(),
                 (half*)next_buffer.data_ptr(), epsilon, cols, next_buffer.size(1));
         } else {
-            _residual_rms_pointwise<__hip_fp8_storage_t, true><<<grid, block, 0, stream>>>(
+            _residual_rms_scalar<__hip_fp8_storage_t, true><<<grid, block, 0, stream>>>(
                 (half*)input.data_ptr(), (half*)residual.data_ptr(), (half*)weight.data_ptr(),
                 (float*)scale_tensor.data_ptr(), (__hip_fp8_storage_t*)output.data_ptr(), (half*)next_buffer.data_ptr(),
                 epsilon, cols, next_buffer.size(1));

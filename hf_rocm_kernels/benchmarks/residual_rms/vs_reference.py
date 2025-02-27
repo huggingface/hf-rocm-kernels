@@ -21,12 +21,12 @@ if __name__ == "__main__":
         bench.add_measure(
             header="Pointwise (μs)", 
             label=rows, 
-            fn=lambda: residual_rms(*args, force_pointwise=True),
+            fn=lambda: residual_rms(*args, force_scalar=True),
         )
         bench.add_measure(
             header="Vectorized (μs)", 
             label=rows, 
-            fn=lambda: residual_rms(*args, force_pointwise=False),
+            fn=lambda: residual_rms(*args, force_scalar=False),
         )
 
     bench.display_table(row_header="Nb. rows")

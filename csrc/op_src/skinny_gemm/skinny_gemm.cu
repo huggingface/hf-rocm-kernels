@@ -1,6 +1,11 @@
 #include "./consumer.cu"
 #include "./producer.cu"
 
+#define launch_tsr(BL, AP, BP, C, QS)                                                                        \
+    block.x = WARPSIZE * (AP + BP + C);                                                                      \
+    _tsr_kernel<BL, AP, BP, C, QS><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k); \
+    break;
+
 template <int B_LANES, int A_PRODUCERS, int B_PRODUCERS, int CONSUMERS, int QSIZE>
 void __global__ _tsr_kernel(const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D,
                             const float* scale_tensor, const int m, const int n, const int k, const int split_k) {
@@ -132,21 +137,13 @@ void skinny_gemm(torch::Tensor& A, torch::Tensor& B, torch::Tensor& D, torch::Te
     // Launch kernel (branched on B_LANES)
     switch (b_lanes) {
         case 2:
-            block.x = WARPSIZE * (3 + 8 + 4);
-            _tsr_kernel<2, 3, 8, 4, 5><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;
+            launch_tsr(2, 3, 8, 4, 5);
         case 3:
-            block.x = WARPSIZE * (3 + 5 + 2);
-            _tsr_kernel<3, 3, 5, 2, 4><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;  // 8_13312_16384:57.54
+            launch_tsr(3, 3, 5, 2, 4);  // Perforamnce on MI300: 8_13312_16384:57.54
         case 4:
-            block.x = WARPSIZE * (2 + 6 + 3);
-            _tsr_kernel<4, 2, 6, 3, 3><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;  // 8_16384_6656:29.5
+            launch_tsr(4, 2, 6, 3, 3);  // Perforamnce on MI300: 8_16384_6656:29.5
         case 5:
-            block.x = WARPSIZE * (2 + 6 + 2);
-            _tsr_kernel<5, 2, 6, 2, 2><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k);
-            break;
+            launch_tsr(5, 2, 6, 2, 2);
         default:
             break;
     }

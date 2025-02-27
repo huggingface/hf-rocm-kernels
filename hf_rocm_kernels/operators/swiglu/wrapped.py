@@ -43,22 +43,7 @@ def swiglu_choose_mode(gate_up_proj: Tensor, next_buffer: Tensor, mode: int) -> 
         )
     return mode
 
-# def infer_num_threads(rows: int, mode: int, num_threads: int) -> int:
-#     # Error case
-#     if num_threads < 0 or num_threads > 1024:
-#         raise ValueError(f"{num_threads = } is not between 0 and 1024")
-#     # Case: num_threads was specified
-#     elif num_threads != 0:
-#         return num_threads
-#     # Case: mode == 0, ie. not vectorized mode
-#     if mode == 0:
-#         return 1024 
-#     # Otherwise, we branch upon the number of rows
-#     if rows <= 32:
-#         return 1024
-#     elif rows <= 128:
-#         return 768
-#     return 384
+# TODO add this function: infer_num_threads(rows: int, mode: int, num_threads: int) -> int 
 
 def swiglu(
     gate_up_proj: Tensor,
