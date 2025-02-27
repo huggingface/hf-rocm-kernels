@@ -1,6 +1,6 @@
 import torch
 from typing import Callable, Dict
-from triton.testing import do_bench_cudagraph
+from triton.testing import do_bench, do_bench_cudagraph
 import tabulate
 import warnings
 import itertools
@@ -33,10 +33,13 @@ class Bench:
             warnings.warn(f"Device {torch.cuda.current_device()} is not fully free: {metrics = }")
         return metrics
 
-    def benchmark_fn(self, fn: Callable[[], None], rep: int = 100) -> float:
+    def benchmark_fn(self, fn: Callable[[], None], rep: int = 100, cg: bool = True) -> float:
         """Benchmarks a function using triton's cuda graphs's benchmark."""
-        with torch.cuda.stream(torch.cuda.Stream()):
-            t = do_bench_cudagraph(fn, rep=rep)
+        if cg:
+            with torch.cuda.stream(torch.cuda.Stream()):
+                t = do_bench_cudagraph(fn, rep=rep)
+        else:
+            t = do_bench(fn, warmup=rep, rep=5*rep)
         torch.cuda.synchronize()
         return t * 1e3
     

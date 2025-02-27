@@ -165,6 +165,8 @@ set(KERNEL_SRC
   "csrc/torch_bindings.cpp"
   "csrc/op_src/increment/increment_op.cu"
   "csrc/op_src/residual_rms/residual_rms_dispatch.cu"
+  "csrc/op_src/swiglu/swiglu_dispatch.cu"
+  "csrc/op_src/skinny_gemm/skinny_gemm.cu"
 )
 
 message(STATUS "Enabling C extension.")

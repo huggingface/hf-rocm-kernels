@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 import os
 import matplotlib.pyplot as plt
 
@@ -10,9 +11,10 @@ if __name__ == "__main__":
     bench = Bench()
 
     # Parameters
-    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048]
     cols = 16384
-    mode = 4
+    buffer_cols = 0
+    dtype = torch.float8_e4m3fnuz
 
     # Delete old figure 
     if os.path.exists("__bench__.png"):
@@ -23,9 +25,8 @@ if __name__ == "__main__":
 
         ns, ts = [], []
         for nthreads in tqdm([64 + i for i in range(0, 1024, 64)]):
-            args = generate_residual_rms_data(rows, cols)
-            scale = args[-1].item()
-            t = bench.benchmark_fn(fn=lambda: residual_rms(*args[:-1], scale, mode, nthreads))
+            args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
+            t = bench.benchmark_fn(fn=lambda: residual_rms(*args, nthreads))
             ns.append(nthreads)
             ts.append(t)
         min_t = min(ts)
