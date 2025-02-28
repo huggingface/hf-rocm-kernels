@@ -5,7 +5,7 @@ from torch import Tensor
 from .binding import _swiglu
 
 
-_HIGHEST_VECTORIZED_SWIGLU_MODE = 0
+_HIGHEST_VECTORIZED_SWIGLU_MODE = 1
 
 
 def swiglu_checks(
@@ -50,7 +50,7 @@ def swiglu(
     scale_tensor: Tensor,
     next_buffer: Optional[Tensor] = None,
     mode: int = -1,
-) -> Tuple[Tensor, Tensor]:
+) -> Tensor:
     """Kernel that fuses a swiglu activation and a conversion to fp8. Can also initialize a buffer with as many rows as 
     the input to zero.
     Args:

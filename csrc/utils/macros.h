@@ -1,5 +1,7 @@
 #pragma once
 
+#define WARPSIZE 64
+
 #define FP8_CLAMP(x, type)                   \
     x = (x > (type)448.0) ? (type)448.0 : x; \
     x = (x < (type) - 448.0) ? (type) - 448.0 : x;
