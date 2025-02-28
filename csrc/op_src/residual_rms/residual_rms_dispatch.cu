@@ -26,7 +26,7 @@ void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-m
 
     // Check tensors alignment
     bool vectorized_available = IS_16B_ALIGNED(input) && IS_16B_ALIGNED(residual) && IS_16B_ALIGNED(weight);
-    vectorized_available = vectorized_available && (!force_scalar);
+    vectorized_available = vectorized_available && (!force_scalar) && (cols <= 32000);
 
     // Case: output is fp16
     if (output.dtype() == torch::kFloat16) {

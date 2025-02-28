@@ -78,7 +78,7 @@ def test_residual_rms(
 if __name__ == "__main__":
 
     nb_toks = 1
-    hidden_size = 8
+    hidden_size = 8200
     dtype = torch.float8_e4m3fnuz
     buffer_cols = 32
     force_scalar = False

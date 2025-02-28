@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
 from hf_rocm_kernels.utils.benchmarking import Bench
@@ -9,10 +10,11 @@ if __name__ == "__main__":
 
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256]
     cols = 16384
-    buffer_cols = 13312 
+    buffer_cols = 0 
+    dtype = torch.float8_e4m3fnuz
 
     for rows in tqdm(list_rows, "Gathering measures"):
-        args = generate_residual_rms_data(rows, cols, buffer_cols)
+        args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
         bench.add_measure(
             header="Ref (μs)", 
             label=rows, 

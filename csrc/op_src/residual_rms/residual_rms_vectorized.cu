@@ -15,13 +15,16 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
                                          half* __restrict__ next_buffer, const float epsilon, const int cols,
                                          const int buffer_cols) {
     static constexpr int elems_per_load = 8;
+    __shared__ half _smem[32000];
 
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols + elems_per_load * threadIdx.x;
     residual += blockIdx.x * cols + elems_per_load * threadIdx.x;
     weight += elems_per_load * threadIdx.x;
     output += (blockIdx.x * cols + elems_per_load * threadIdx.x) / 2;
+
     half* residual_start = residual;
+    half* residual_smem_buffer = &_smem[0] + elems_per_load * threadIdx.x;
 
     // Residual connection: inplace add of input to residual, accumulate norm along the way
     float variance = 0.0f;
@@ -48,24 +51,18 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             residual_buffer[j] += input_buffer[j];
             float float_res = (float)residual_buffer[j];
             variance += float_res * float_res;
-            // TODO: add support for this ASM snippet and check performance
-            // asm volatile(
-            //     "v_pk_add_f16 %0, %2, %3\n\t"
-            //     "v_dot2c_f32_f16 %1, %2, %2"
-            //     : "=v"(residual_buffer[j]), "=v"(variance)
-            //     : "0"(residual_buffer[j]), "v"(input_buffer[j])
-            // );
         }
 
-        // 128-bits store
-#pragma unroll
+        // 128-bits smem store
+        #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
-            residual[j] = residual_buffer[j];
+            residual_smem_buffer[j] = residual_buffer[j];
         }
 
         // Advance pointers
         input += loop_stride;
         residual += loop_stride;
+        residual_smem_buffer += loop_stride;
     }
     variance /= cols;
 
@@ -82,7 +79,6 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 
     // Normalize and convert
     float2 tmp_float2;
-    half residual_buffer_[elems_per_load];
     half weight_buffer[elems_per_load];
     T output_buffer[elems_per_load / 2];
 
@@ -93,13 +89,15 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
     }
 
     residual = residual_start;
+    residual_smem_buffer = &_smem[0] + elems_per_load * threadIdx.x;
+
     for (int i = 0; i < iterations; i++) {
-// 128-bits loads
-#pragma unroll
+        // 128-bits loads
+        #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
-            residual_buffer_[j] = residual[j];
+            residual_buffer[j] = residual_smem_buffer[j];
         }
-#pragma unroll
+        #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
             weight_buffer[j] = weight[j];
         }
@@ -109,12 +107,12 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         for (int j = 0; j < elems_per_load / 2; j++) {
             // Output is fp8
             if constexpr (std::is_same_v<T, __hip_fp8x2_storage_t>) {
-                tmp_float2.x = (float)residual_buffer_[2 * j] * shared_normalizer;
+                tmp_float2.x = (float)residual_buffer[2 * j] * shared_normalizer;
                 tmp_float2.x = (float)((half)(tmp_float2.x) * weight_buffer[2 * j]);
                 tmp_float2.x *= inv_scale;
                 FP8_CLAMP(tmp_float2.x, float);
 
-                tmp_float2.y = (float)residual_buffer_[2 * j + 1] * shared_normalizer;
+                tmp_float2.y = (float)residual_buffer[2 * j + 1] * shared_normalizer;
                 tmp_float2.y = (float)((half)(tmp_float2.y) * weight_buffer[2 * j + 1]);
                 tmp_float2.y *= inv_scale;
                 FP8_CLAMP(tmp_float2.y, float);
@@ -124,8 +122,8 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 
             // Output is fp16
             if constexpr (std::is_same_v<T, half2>) {
-                tmp_float2.x = (float)residual_buffer_[2 * j];
-                tmp_float2.y = (float)residual_buffer_[2 * j + 1];
+                tmp_float2.x = (float)residual_buffer[2 * j];
+                tmp_float2.y = (float)residual_buffer[2 * j + 1];
                 tmp_float2 *= shared_normalizer;
                 half2 tmp = {(half)tmp_float2.x, (half)tmp_float2.y};
                 tmp *= reinterpret_cast<const half2*>(weight_buffer)[j];
@@ -133,14 +131,21 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             }
         }
 
-// 64b store
-#pragma unroll
+        // 64b store
+        #pragma unroll
         for (int j = 0; j < elems_per_load / 2; j++) {
             output[j] = output_buffer[j];
         }
+        // 128b store
+        #pragma unroll
+        for (int j = 0; j < elems_per_load; j++) {
+            residual[j] = residual_buffer[j];
+        }
+
 
         // Advance pointers
         residual += loop_stride;
+        residual_smem_buffer += loop_stride;
         weight += loop_stride;
         output += loop_stride / 2;
     }
@@ -156,3 +161,15 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         }
     }
 }
+
+//   Nb. rows    Ref (μs)    Pointwise (μs)    Vectorized (μs)
+// ----------  ----------  ----------------  -----------------
+//          1     40.6864           10.4857            4.8905
+//          2     42.8676           10.5499            5.04421
+//          4     43.7978           10.5729            5.05962
+//          8     44.0237           10.6909            5.10061
+//         16     47.1026           10.7823            5.19516
+//         32     56.3393           11.0192            5.45101
+//         64     74.0383           14.0895            5.86153
+//        128     98.3725           15.2012            6.59527
+//        256    119.426            27.7393           11.5191
