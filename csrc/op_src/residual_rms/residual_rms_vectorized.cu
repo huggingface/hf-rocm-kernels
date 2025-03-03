@@ -78,14 +78,12 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
     __syncthreads();
 
     // Normalize and convert
-    float2 tmp_float2;
-    half weight_buffer[elems_per_load];
+    __half2 weight_buffer[elems_per_load / 2];
     T output_buffer[elems_per_load / 2];
 
-    // Get inverse scale (only for fp8)
-    float inv_scale = 1.0f;
+    // Apply inverse scale (only for fp8)
     if constexpr (std::is_same_v<T, __hip_fp8x2_storage_t>) {
-        inv_scale = 1 / scale_tensor[0];
+        shared_normalizer = shared_normalizer / scale_tensor[0];
     }
 
     residual = residual_start;
@@ -98,8 +96,14 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             residual_buffer[j] = residual_smem_buffer[j];
         }
         #pragma unroll
+        for (int j = 0; j < elems_per_load / 2; j++) {
+            weight_buffer[j] = reinterpret_cast<const __half2*>(weight)[j];
+        }
+
+        // 128b store
+        #pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
-            weight_buffer[j] = weight[j];
+            residual[j] = residual_buffer[j];
         }
 
 // Compute and fill buffer
@@ -107,21 +111,19 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         for (int j = 0; j < elems_per_load / 2; j++) {
             // Output is fp8
             if constexpr (std::is_same_v<T, __hip_fp8x2_storage_t>) {
-                tmp_float2.x = (float)residual_buffer[2 * j] * shared_normalizer;
-                tmp_float2.x = (float)((half)(tmp_float2.x) * weight_buffer[2 * j]);
-                tmp_float2.x *= inv_scale;
-                FP8_CLAMP(tmp_float2.x, float);
+                __half2 tmp_res = {residual_buffer[2 * j], residual_buffer[2 * j + 1]};
+                tmp_res = tmp_res * weight_buffer[j];
+                float2 tmp_float2 = __half22float2(tmp_res);
+                tmp_float2 *= shared_normalizer;
 
-                tmp_float2.y = (float)residual_buffer[2 * j + 1] * shared_normalizer;
-                tmp_float2.y = (float)((half)(tmp_float2.y) * weight_buffer[2 * j + 1]);
-                tmp_float2.y *= inv_scale;
-                FP8_CLAMP(tmp_float2.y, float);
-
+                tmp_float2.x = __builtin_amdgcn_fmed3f(tmp_float2.x, 448.0, -448.0);
+                tmp_float2.y = __builtin_amdgcn_fmed3f(tmp_float2.y, 448.0, -448.0);
                 output_buffer[j] = __hip_cvt_float2_to_fp8x2(tmp_float2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
             }
 
             // Output is fp16
             if constexpr (std::is_same_v<T, half2>) {
+                float2 tmp_float2;
                 tmp_float2.x = (float)residual_buffer[2 * j];
                 tmp_float2.y = (float)residual_buffer[2 * j + 1];
                 tmp_float2 *= shared_normalizer;
@@ -135,11 +137,6 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
         #pragma unroll
         for (int j = 0; j < elems_per_load / 2; j++) {
             output[j] = output_buffer[j];
-        }
-        // 128b store
-        #pragma unroll
-        for (int j = 0; j < elems_per_load; j++) {
-            residual[j] = residual_buffer[j];
         }
 
 
@@ -173,3 +170,15 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
 //         64     74.0383           14.0895            5.86153
 //        128     98.3725           15.2012            6.59527
 //        256    119.426            27.7393           11.5191
+
+//   Nb. rows    Ref (μs)    Pointwise (μs)    Vectorized (μs)
+// ----------  ----------  ----------------  -----------------
+//          1     38.8908           10.5276            4.28524
+//          2     42.8806           10.5337            4.30209
+//          4     43.2694           10.6618            4.38874
+//          8     43.4718           10.6979            4.41091
+//         16     46.6662           10.8013            4.49634
+//         32     55.7943           11.0203            4.78883
+//         64     75.1326           14.1084            5.38017
+//        128    100                15.129             6.31691
+//        256    118.571            27.3881           11.1394
