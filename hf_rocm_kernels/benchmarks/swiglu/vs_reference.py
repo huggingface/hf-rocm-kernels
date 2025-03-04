@@ -24,13 +24,13 @@ if __name__ == "__main__":
         bench.add_raw_measure(
             header="Ref (μs)", 
             label=rows, 
-            measure=benchmark_swiglu(**kwargs, mode=-1),
+            measure=benchmark_swiglu(**kwargs, num_threads=0),
         )
-        for mode in [0, 1, 2]:
+        for force_scalar in [True, False]:
             bench.add_raw_measure(
-                header=f"Mode {mode} (μs)", 
+                header="Scalar (μs)" if force_scalar else "Vectorized (μs)", 
                 label=rows, 
-                measure=benchmark_swiglu(**kwargs, mode=mode),
+                measure=benchmark_swiglu(**kwargs, force_scalar=force_scalar, num_threads=-1),
             )
 
     bench.display_table(row_header="Nb. rows")

@@ -4,12 +4,12 @@ from hf_rocm_kernels.operators.swiglu import swiglu, reference_swiglu
 def benchmark_swiglu(
     batch_size: int,
     intermediate_size: int,
-    mode: int,
+    num_threads: int, # 0 for reference, -1 for automatic, >0 for specific number of threads
+    force_scalar: bool = False,
     graph_size: int = 16,
     warmups: int = 50,
     iterations: int = 250,
     device: str = "cuda",
-    nb_threads: int = -1,
 ) -> float:
     # Create input
     inputs = [
@@ -22,12 +22,12 @@ def benchmark_swiglu(
     ]
 
     # Define function to benchmark
-    if mode == -1:
+    if num_threads == 0:
         def fn(i: int) -> None:
             reference_swiglu(inputs[i], scale_tensors[i], next_buffer=None)
-    else:
+    elif num_threads == -1:
         def fn(i: int) -> None:
-            swiglu(inputs[i], scale_tensors[i], next_buffer=None, mode=mode, nb_threads=nb_threads)
+            swiglu(inputs[i], scale_tensors[i], next_buffer=None, force_scalar=force_scalar, num_threads=num_threads)
     
     # Create a side-stream to benchmark in
     stream = torch.cuda.Stream(device)

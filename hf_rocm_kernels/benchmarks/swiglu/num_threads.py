@@ -14,19 +14,19 @@ if __name__ == "__main__":
     list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048]
     hidden_dim = 16384
     buffer_cols = 0
-    mode = 3
+    force_scalar = False
+
     # Delete old figure 
     if os.path.exists("__bench__.png"):
         os.remove("__bench__.png")
 
     # Loop over the number of rows
     for rows in list_rows:
-
         ns, ts = [], []
-        for nthreads in tqdm([64 + i for i in range(0, 1024, 64)]):
+        for num_threads in tqdm([64 + i for i in range(0, 1024, 64)]):
             args = generate_swiglu_data(rows, hidden_dim, buffer_cols)
-            t = bench.benchmark_fn(fn=lambda: swiglu(*args, mode=mode, nb_threads=nthreads))
-            ns.append(nthreads)
+            t = bench.benchmark_fn(fn=lambda: swiglu(*args, num_threads=num_threads, force_scalar=force_scalar))
+            ns.append(num_threads)
             ts.append(t)
         min_t = min(ts)
         min_n = [n for i, n in enumerate(ns) if ts[i] == min_t][0]
@@ -39,5 +39,5 @@ if __name__ == "__main__":
     # Loop over the number of rows
     for rows in list_rows:
         args = generate_swiglu_data(rows, hidden_dim, buffer_cols)
-        t = bench.benchmark_fn(fn=lambda: swiglu(*args, mode=mode, nb_threads=-1))
-        print(rows, t, infer_num_threads(rows, hidden_dim, mode, -1))
+        t = bench.benchmark_fn(fn=lambda: swiglu(*args, num_threads=-1, force_scalar=force_scalar))
+        print(rows, t, infer_num_threads(rows, hidden_dim, force_scalar, -1))

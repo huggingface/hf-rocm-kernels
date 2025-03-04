@@ -30,8 +30,8 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
 
     // Swiglu
     ops.def(
-        "swiglu(Tensor gate_up_proj, Tensor scale_tensor, Tensor! swiglu_out, Tensor! next_buffer, int mode, "
-        "int thread_per_block) -> ()");
+        "swiglu(Tensor gate_up, Tensor scale_tensor, Tensor! output, Tensor! next_buffer, int num_threads, "
+        "bool force_scalar) -> ()");
     ops.impl("swiglu", torch::kCUDA, &swiglu);
 
     // Skinny GEMM

@@ -9,7 +9,7 @@
 #include "utils/macros.h"
 
 
-__device__ void initialize_buffer(half* __restrict__ next_buffer, int rows, int buffer_cols) {
+__device__ void initialize_buffer_vectorized(half* __restrict__ next_buffer, int rows, int buffer_cols) {
     const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
     const int buffer_elems_per_thread = CDIV(rows * buffer_cols, blockDim.x * gridDim.x);
     const int chunks_of_8 = CDIV(buffer_elems_per_thread, 8);
@@ -25,34 +25,36 @@ __device__ void initialize_buffer(half* __restrict__ next_buffer, int rows, int 
     }
 }
 
-__global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* __restrict__ scale_tensor,
-                           __hip_fp8_storage_t* __restrict__ swiglu_out, half* __restrict__ next_buffer, int rows, 
-                           int hidden_dim, int buffer_cols) {
+__global__ void _swiglu_vectorized(const half* __restrict__ gate_up, const float* __restrict__ scale_tensor,
+                           __hip_fp8_storage_t* __restrict__ output, half* __restrict__ next_buffer, int rows, 
+                           int output_cols, int buffer_cols) {
     static constexpr int elems_per_threads = 8;
 
     // Advance pointers according to the position of the thread in the grid
-    const int threads_per_row = hidden_dim / elems_per_threads;
+    const int threads_per_row = output_cols / elems_per_threads;
     const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 
     const int row_id = thread_id / threads_per_row;
     const int col_id = thread_id % threads_per_row;
 
     if (row_id >= rows) {
-        initialize_buffer(next_buffer, rows, buffer_cols);
+        initialize_buffer_vectorized(next_buffer, rows, buffer_cols);
         return;
     }
 
-    const half* __restrict__ gate_ptr = gate_up_proj + (row_id * 2 * hidden_dim) + col_id * elems_per_threads;
-    const half* __restrict__ up_ptr = gate_ptr + hidden_dim;
-    __hip_fp8x2_storage_t* __restrict__ swiglu_out_ptr = reinterpret_cast<__hip_fp8x2_storage_t*>(
-        swiglu_out + (row_id * hidden_dim) + col_id * elems_per_threads);
+    const half* __restrict__ gate_ptr = gate_up + (row_id * 2 * output_cols) + col_id * elems_per_threads;
+    const half* __restrict__ up_ptr = gate_ptr + output_cols;
+    __hip_fp8x2_storage_t* __restrict__ output_ptr = reinterpret_cast<__hip_fp8x2_storage_t*>(
+        output + (row_id * output_cols) + col_id * elems_per_threads);
 
     // Prepare swiglu loop
     half2 gate_regs[elems_per_threads/2];
     half2 up_regs[elems_per_threads/2];
-    __hip_fp8x2_storage_t swiglu_out_regs[elems_per_threads/2];
+    __hip_fp8x2_storage_t output_regs[elems_per_threads/2];
 
-    float inv_scale = 1 / scale_tensor[0];
+    // Add protection against division by zero
+    float scale_value = scale_tensor[0];
+    float inv_scale = (scale_value != 0.0f) ? (1.0f / scale_value) : 1.0f;
 
     // Load gate and up elements using half2 (packed)
     #pragma unroll
@@ -68,7 +70,7 @@ __global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* _
         float2 gate_f32x2 = __half22float2(gate_regs[j]);
         
         // Apply sigmoid to gate values using exp2 instead of expf
-        // log2(e) ≈ 1.44269504089f, so we scale the input by this factor
+        // log2(e) ≈ 1.44269504089f, so we scale the gate_up by this factor
         gate_f32x2.x = gate_f32x2.x / (1 + exp2(-gate_f32x2.x * 1.44269504089f));
         gate_f32x2.y = gate_f32x2.y / (1 + exp2(-gate_f32x2.y * 1.44269504089f));
         
@@ -82,15 +84,15 @@ __global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* _
         gate_f32x2.y = __builtin_amdgcn_fmed3f(gate_f32x2.y, 448.0, -448.0);
 
         // Store fp8x2
-        swiglu_out_regs[j] = __hip_cvt_float2_to_fp8x2(gate_f32x2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
+        output_regs[j] = __hip_cvt_float2_to_fp8x2(gate_f32x2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);
     }
 
     // Store fp8x2
     #pragma unroll
     for (int j = 0; j < elems_per_threads/2; j++) {
-        swiglu_out_ptr[j] = swiglu_out_regs[j];
+        output_ptr[j] = output_regs[j];
     }
 
     // Initialize next buffer
-    initialize_buffer(next_buffer, rows, buffer_cols);
+    initialize_buffer_vectorized(next_buffer, rows, buffer_cols);
 }
