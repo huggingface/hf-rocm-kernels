@@ -1,11 +1,12 @@
 from typing import Tuple, Optional
 import torch
+from math import ceil
 from torch import Tensor
 
 from .binding import _swiglu
 
 
-_HIGHEST_VECTORIZED_SWIGLU_MODE = 1
+_HIGHEST_VECTORIZED_SWIGLU_MODE = 2
 
 
 def swiglu_checks(
@@ -43,13 +44,38 @@ def swiglu_choose_mode(gate_up_proj: Tensor, next_buffer: Tensor, mode: int) -> 
         )
     return mode
 
-# TODO add this function: infer_num_threads(rows: int, mode: int, num_threads: int) -> int 
+def infer_num_threads(rows: int, hidden_dim: int, mode: int, num_threads: int) -> int:
+    # If a number of threads is given, use it
+    if num_threads != -1:
+        return num_threads
+    
+    # For non-vectorized mode, just use as many threads as possible
+    max_threads_per_sm = 1024
+    if mode == 0:
+        return max_threads_per_sm
+
+    # For vectorized modes (mode > 0) use a pre-computed interpolation table
+    work = rows * hidden_dim
+    if work <= 32 * 16384:
+        return 256
+    if work <= 64 * 16384:
+        return 448
+    if work <= 128 * 16384:
+        return 64
+    if work <= 256 * 16384:
+        return 192
+    if work <= 1024 * 16384:
+        return 512
+    if work <= 2048 * 16384:
+        return 128
+    return 1024
 
 def swiglu(
     gate_up_proj: Tensor,
     scale_tensor: Tensor,
     next_buffer: Optional[Tensor] = None,
     mode: int = -1,
+    nb_threads: int = -1,
 ) -> Tensor:
     """Kernel that fuses a swiglu activation and a conversion to fp8. Can also initialize a buffer with as many rows as 
     the input to zero.
@@ -67,7 +93,7 @@ def swiglu(
         next_buffer = torch.empty(size=(gate_up_proj.size(0), 0), device=gate_up_proj.device, dtype=torch.float16)
     swiglu_checks(gate_up_proj, scale_tensor, next_buffer)
     mode = swiglu_choose_mode(gate_up_proj, next_buffer, mode)
-    # num_threads = infer_num_threads(gate_up_proj.size(0), mode, num_threads)
+    num_threads = infer_num_threads(gate_up_proj.size(0), gate_up_proj.size(1), mode, nb_threads)
     swiglu_out = torch.empty(
         size=(gate_up_proj.size(0), gate_up_proj.size(1) // 2), 
         dtype=torch.float8_e4m3fnuz, 
@@ -79,5 +105,6 @@ def swiglu(
         swiglu_out=swiglu_out,
         next_buffer=next_buffer,
         mode=mode,
+        nb_threads=num_threads,
     )
     return swiglu_out

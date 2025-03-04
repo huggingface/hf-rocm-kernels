@@ -44,10 +44,14 @@ class Bench:
         return t * 1e3
     
     def add_measure(self, header: str, label: int, fn: Callable[[], None], rep: int = 100) -> float:
+        t = self.benchmark_fn(fn, rep)
+        self.add_raw_measure(header, label, t)
+
+    def add_raw_measure(self, header: str, label: int, measure: float) -> float:
         """Add a measure to the benchmark table in the (header) column at the given (row)."""
         if header not in self._measures:
             self._measures[header] = {}
-        self._measures[header][label] = self.benchmark_fn(fn, rep)
+        self._measures[header][label] = measure
 
     def display_table(self, row_header: str) -> None:
         """Display the current benchmark table with a (row_header) for the row's column."""
