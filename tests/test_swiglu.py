@@ -43,17 +43,15 @@ def test_swiglu(
 if __name__ == "__main__":
 
     NB_TOKENS = 64
-    HIDDEN_SIZE = 64
-    BUFFER_COLS = 0
+    HIDDEN_SIZE = 6656
+    BUFFER_COLS = 16384
     MODE = 2
 
     # Generate data
     gate_up, scale_tensor, next_buffer = generate_swiglu_data(NB_TOKENS, HIDDEN_SIZE, BUFFER_COLS, seed=0)
-    gate_up[:, HIDDEN_SIZE:] = 1
-    scale_tensor[:] = 1
     
     # Get outputs
-    swiglu_out = swiglu(gate_up, scale_tensor.mul(2), next_buffer, MODE)
+    swiglu_out = swiglu(gate_up_proj=gate_up, scale_tensor=scale_tensor.mul(2), next_buffer=next_buffer, mode=MODE)
     ref_swiglu_out = reference_swiglu(gate_up, scale_tensor, next_buffer)
 
     # Plot comparison
@@ -69,6 +67,8 @@ if __name__ == "__main__":
     
     fig.tight_layout()
     fig.savefig('__test__.png')
+
+    print(f"{next_buffer.sum() = }")
 
     # Print the first two rows of each tensor with their names
     # print("Swiglu out:")

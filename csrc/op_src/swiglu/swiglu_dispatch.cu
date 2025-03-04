@@ -27,13 +27,11 @@ void swiglu(torch::Tensor& gate_up_proj,  // Shape: [m, 2*n] / Layout: row-major
 
     // Launch kernel
     switch (mode) {
-        // TODO : propagate nb threads
         case 2:
-            block.x = thread_per_block;
             grid.x = CDIV((hidden_dim * rows) / 8, block.x);
             _swiglu_v2<<<grid, block, 0, stream>>>((half*)gate_up_proj.data_ptr(), (float*)scale_tensor.data_ptr(),
-                                                   (__hip_fp8_storage_t*)swiglu_out.data_ptr(), rows, hidden_dim);
-                                                   // TODO - WARNING : add buffer cols back
+                                                   (__hip_fp8_storage_t*)swiglu_out.data_ptr(),
+                                                   (half*)next_buffer.data_ptr(), rows, hidden_dim, buffer_cols);
             break;
         case 1:
             _swiglu_v1<<<grid, block, 0, stream>>>((half*)gate_up_proj.data_ptr(), (float*)scale_tensor.data_ptr(),

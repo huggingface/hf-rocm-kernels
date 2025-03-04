@@ -8,8 +8,26 @@
 
 #include "utils/macros.h"
 
+
+__device__ void initialize_buffer(half* __restrict__ next_buffer, int rows, int buffer_cols) {
+    const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+    const int buffer_elems_per_thread = CDIV(rows * buffer_cols, blockDim.x * gridDim.x);
+    const int chunks_of_8 = CDIV(buffer_elems_per_thread, 8);
+
+    for (int i = 0; i < chunks_of_8; i++) {
+        int offs = 8 * (thread_id * chunks_of_8 + i);
+        half* buffer_ptr = next_buffer + (offs % (rows * buffer_cols));
+
+        #pragma unroll
+        for (int j = 0; j < 8; j++) {
+            buffer_ptr[j] = (half)0;
+        }
+    }
+}
+
 __global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* __restrict__ scale_tensor,
-                           __hip_fp8_storage_t* __restrict__ swiglu_out, int rows, int hidden_dim) {
+                           __hip_fp8_storage_t* __restrict__ swiglu_out, half* __restrict__ next_buffer, int rows, 
+                           int hidden_dim, int buffer_cols) {
     static constexpr int elems_per_threads = 8;
 
     // Advance pointers according to the position of the thread in the grid
@@ -20,6 +38,7 @@ __global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* _
     const int col_id = thread_id % threads_per_row;
 
     if (row_id >= rows) {
+        initialize_buffer(next_buffer, rows, buffer_cols);
         return;
     }
 
@@ -71,12 +90,7 @@ __global__ void _swiglu_v2(const half* __restrict__ gate_up_proj, const float* _
     for (int j = 0; j < elems_per_threads/2; j++) {
         swiglu_out_ptr[j] = swiglu_out_regs[j];
     }
-//     // Initialize next buffer
-//     for (int i = elems_per_threads * threadIdx.x; i < buffer_cols; i += elems_per_threads * blockDim.x) {
-// #pragma unroll
-//         for (int j = 0; j < elems_per_threads; j++) {
-//             next_buffer[j] = 0;
-//         }
-//         next_buffer += elems_per_threads * blockDim.x;
-//     }
+
+    // Initialize next buffer
+    initialize_buffer(next_buffer, rows, buffer_cols);
 }

@@ -26,7 +26,7 @@ if __name__ == "__main__":
             label=rows, 
             measure=benchmark_swiglu(**kwargs, mode=-1),
         )
-        for mode in [0, 1, 2, 3]:
+        for mode in [0, 1, 2]:
             bench.add_raw_measure(
                 header=f"Mode {mode} (μs)", 
                 label=rows, 
