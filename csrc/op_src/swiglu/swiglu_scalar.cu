@@ -8,7 +8,6 @@
 
 #include "utils/macros.h"
 
-
 __device__ void initialize_buffer_scalar(half* __restrict__ next_buffer, int rows, int buffer_cols) {
     const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
     const int buffer_elems_per_thread = CDIV(rows * buffer_cols, blockDim.x * gridDim.x);
@@ -23,13 +22,12 @@ __device__ void initialize_buffer_scalar(half* __restrict__ next_buffer, int row
 }
 
 __global__ void _swiglu_scalar(const half* __restrict__ gate_up, const float* __restrict__ scale_tensor,
-                           __hip_fp8_storage_t* __restrict__ output, half* __restrict__ next_buffer, int rows, 
-                           int output_cols, int buffer_cols) {
-
+                               __hip_fp8_storage_t* __restrict__ output, half* __restrict__ next_buffer, int rows,
+                               int output_cols, int buffer_cols) {
     // Advance pointers according to the position of the thread in the grid
     const int elems_per_threads = CDIV(rows * output_cols, blockDim.x * gridDim.x);
     const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-    const int offs = thread_id * elems_per_threads;;
+    const int offs = thread_id * elems_per_threads;
 
     // Prepare swiglu loop
     float inv_scale = 1 / scale_tensor[0];
@@ -52,8 +50,8 @@ __global__ void _swiglu_scalar(const half* __restrict__ gate_up, const float* __
         half up = up_ptr[0];
 
         float gate_f32 = __half2float(gate);
-        float up_f32 = __half2float(up);     
-        
+        float up_f32 = __half2float(up);
+
         gate_f32 = gate_f32 / (1 + exp2(-gate_f32 * 1.44269504089f));
         gate_f32 *= up_f32;
         gate_f32 *= inv_scale;

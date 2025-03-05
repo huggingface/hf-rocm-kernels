@@ -53,8 +53,8 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             variance += float_res * float_res;
         }
 
-        // 128-bits smem store
-        #pragma unroll
+// 128-bits smem store
+#pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
             residual_smem_buffer[j] = residual_buffer[j];
         }
@@ -90,18 +90,18 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
     residual_smem_buffer = &_smem[0] + elems_per_load * threadIdx.x;
 
     for (int i = 0; i < iterations; i++) {
-        // 128-bits loads
-        #pragma unroll
+// 128-bits loads
+#pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
             residual_buffer[j] = residual_smem_buffer[j];
         }
-        #pragma unroll
+#pragma unroll
         for (int j = 0; j < elems_per_load / 2; j++) {
             weight_buffer[j] = reinterpret_cast<const __half2*>(weight)[j];
         }
 
-        // 128b store
-        #pragma unroll
+// 128b store
+#pragma unroll
         for (int j = 0; j < elems_per_load; j++) {
             residual[j] = residual_buffer[j];
         }
@@ -133,12 +133,11 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
             }
         }
 
-        // 64b store
-        #pragma unroll
+// 64b store
+#pragma unroll
         for (int j = 0; j < elems_per_load / 2; j++) {
             output[j] = output_buffer[j];
         }
-
 
         // Advance pointers
         residual += loop_stride;
