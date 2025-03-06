@@ -15,7 +15,7 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
                                          half* __restrict__ next_buffer, const float epsilon, const int cols,
                                          const int buffer_cols) {
     static constexpr int elems_per_load = 8;
-    __shared__ half _smem[32000];
+    __shared__ half _smem[16384];
 
     // Advance pointers according to the position of the thread in the grid
     input += blockIdx.x * cols + elems_per_load * threadIdx.x;
