@@ -114,6 +114,8 @@ __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* _
                 __half2 tmp_res = {residual_buffer[2 * j], residual_buffer[2 * j + 1]};
                 tmp_res = tmp_res * weight_buffer[j];
                 float2 tmp_float2 = __half22float2(tmp_res);
+                // INCREASES PRECISION | TODO: figure out a better test
+                // tmp_float2 = tmp_float2 * __half22float2(weight_buffer[j]);
                 tmp_float2 *= shared_normalizer;
 
                 tmp_float2.x = __builtin_amdgcn_fmed3f(tmp_float2.x, 448.0, -448.0);

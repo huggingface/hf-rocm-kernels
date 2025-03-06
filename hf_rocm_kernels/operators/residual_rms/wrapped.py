@@ -66,10 +66,11 @@ def infer_num_threads(rows: int, num_threads: int) -> int:
     # Otherwise, we branch upon the number of rows
     if rows <= 32:
         return 1024
-    elif rows <= 128:
+    if rows <= 128:
         return 768
-    return 384
-
+    if rows <= 1024:
+        return 896
+    return 1024
 
 def residual_rms(
     input: Tensor, 
