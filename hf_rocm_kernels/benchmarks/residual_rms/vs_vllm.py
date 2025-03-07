@@ -37,27 +37,28 @@ def vllm_resdual_rms(
     return out
 
 
-def run_benchmark(rows: List[int], cols: int, dtype: torch.dtype) -> None:
+def get_vllm_time(bench: Bench, rows: int, cols: int, buffer_cols: int, dtype: torch.dtype) -> float:
+    input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
+    return bench.benchmark_fn(fn=lambda: vllm_resdual_rms(input, residual, weights, epsilon, scale_tensor))
+
+
+def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dtype) -> None:
     bench = Bench()
     for rows in tqdm(rows, "Gathering measures"):
-        input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, 0, dtype)
-        assert next_buffer is None, f"For fair comparaison, next_buffer should be None, but got {next_buffer = }"
+        input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
         bench.add_measure(
             header="Torch (μs)", 
-            label=rows, 
+            label=rows,     
             fn=lambda: reference_residual_rms(input, residual, weights, epsilon, scale_tensor, None),
         )
-        bench.add_measure(
-            header="VLLM (μs)", 
-            label=rows, 
-            fn=lambda: vllm_resdual_rms(input, residual, weights, epsilon, scale_tensor),
-        )
+        bench.add_raw_measure(header="VLLM (μs)", label=rows, measure=get_vllm_time(bench, rows, cols, buffer_cols, dtype))
         bench.add_measure(
             header="Ours (μs)", 
-            label=rows, 
-            fn=lambda: residual_rms(input, residual, weights, epsilon, scale_tensor),
+            label=rows,     
+            fn=lambda: residual_rms(input, residual, weights, epsilon, scale_tensor, next_buffer),
         )
-    print("-" * 40, f"{dtype = }", "-" * 40)
+    bench.add_speedup_column(ref_header="VLLM (μs)", our_header="Ours (μs)")
+    print("-" * 40, f"{dtype = } AND {buffer_cols = }", "-" * 40)
     bench.display_table(row_header="Nb. rows")
 
 
@@ -65,12 +66,14 @@ if __name__ == "__main__":
 
     run_benchmark(
         rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
-        cols=16384, # to imitate Llama3.1 405B in TP8
-        dtype=torch.float16
+        cols=16384, # to imitate Llama3.1 405B in TP8,
+        buffer_cols=13312,
+        dtype=torch.float8_e4m3fnuz
     )
 
     run_benchmark(
         rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
-        cols=16384, # to imitate Llama3.1 405B in TP8
-        dtype=torch.float8_e4m3fnuz
+        cols=16384, # to imitate Llama3.1 405B in TP8,
+        buffer_cols=0,
+        dtype=torch.float16
     )

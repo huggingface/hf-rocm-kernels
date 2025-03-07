@@ -53,6 +53,14 @@ class Bench:
             self._measures[header] = {}
         self._measures[header][label] = measure
 
+    def add_speedup_column(self, ref_header: str, our_header: str) -> None:
+        """Add a speedup column to the benchmark table."""
+        if ref_header not in self._measures or our_header not in self._measures:
+            raise ValueError(f"Headers {ref_header} and {our_header} must be present in the benchmark table.")
+        # Add the speedup column
+        for label in self._measures[ref_header].keys():
+            self.add_raw_measure(f"Speedup", label, self._measures[ref_header][label] / self._measures[our_header][label])
+
     def display_table(self, row_header: str) -> None:
         """Display the current benchmark table with a (row_header) for the row's column."""
         # Gather all rows

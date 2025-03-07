@@ -42,10 +42,10 @@ def test_swiglu(
 
 if __name__ == "__main__":
 
-    NB_TOKENS = 64
-    HIDDEN_SIZE = 6656
-    BUFFER_COLS = 16384
-    FORCE_SCALAR = True
+    NB_TOKENS = 8
+    HIDDEN_SIZE = 512
+    BUFFER_COLS = 0
+    FORCE_SCALAR = False
 
     # Generate data
     gate_up, scale_tensor, next_buffer = generate_swiglu_data(NB_TOKENS, HIDDEN_SIZE, BUFFER_COLS, seed=0)
@@ -67,8 +67,6 @@ if __name__ == "__main__":
     
     fig.tight_layout()
     fig.savefig('__test__.png')
-
-    print(f"{next_buffer.sum() = }")
 
     # Print the first two rows of each tensor with their names
     # print("Swiglu out:")
