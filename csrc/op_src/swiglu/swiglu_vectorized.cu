@@ -79,8 +79,8 @@ __global__ void _swiglu_vectorized(const half* __restrict__ gate_up, const float
         gate_f32x2 *= inv_scale;
 
         // Clamp values
-        gate_f32x2.x = __builtin_amdgcn_fmed3f(gate_f32x2.x, 448.0, -448.0);
-        gate_f32x2.y = __builtin_amdgcn_fmed3f(gate_f32x2.y, 448.0, -448.0);
+        gate_f32x2.x = __builtin_amdgcn_fmed3f(gate_f32x2.x, FP8_MAX, -FP8_MAX);
+        gate_f32x2.y = __builtin_amdgcn_fmed3f(gate_f32x2.y, FP8_MAX, -FP8_MAX);
 
         // Store fp8x2
         output_regs[j] = __hip_cvt_float2_to_fp8x2(gate_f32x2, __HIP_SATFINITE, __HIP_E4M3_FNUZ);

@@ -1,3 +1,4 @@
+import argparse
 from tqdm import tqdm
 import torch
 from typing import Optional, List
@@ -43,9 +44,18 @@ def run_benchmark(rows: List[int], hidden_dim: int, buffer_cols: int) -> None:
 
 
 if __name__ == "__main__":
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    parser.add_argument("--multiplier", "-m", type=int, default=1)
+    args = parser.parse_args()
+
+    rows = [r * args.multiplier for r in args.rows]
+
     # Only benchmark fp8 version
     run_benchmark(
-        rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
+        rows=rows,
         hidden_dim=6656,  # to imitate Llama3.1 405B in TP8
-        buffer_cols=16384,
+        buffer_cols=args.buffer_cols,
     )

@@ -30,7 +30,7 @@ void swiglu(torch::Tensor& gate_up,       // Shape: [m, 2*n] / Layout: row-major
 
     // Launch kernel
     if (vectorized_available) {
-        grid.x = CDIV((output_cols * rows) / 8, num_threads);
+        grid.x = CDIV(rows * (output_cols / 8), num_threads);
         _swiglu_vectorized<<<grid, block, 0, stream>>>((half*)gate_up.data_ptr(), (float*)scale_tensor.data_ptr(),
                                                        (__hip_fp8_storage_t*)output.data_ptr(),
                                                        (half*)next_buffer.data_ptr(), rows, output_cols, buffer_cols);

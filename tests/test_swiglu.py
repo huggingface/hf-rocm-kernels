@@ -23,13 +23,13 @@ def _test_swiglu(rows: int, hidden_dim: int, buffer_cols: int, force_scalar: boo
 @pytest.mark.parametrize("force_scalar", [True, False])
 @pytest.mark.parametrize("buffer_cols", [0, 1024, 16384])
 @pytest.mark.parametrize("hidden_dim", [8, 24, 128, 512, 4096, 6656])
-@pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256])
+@pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256, 1024, 2048]) # errors for 1024 but small ones
 def test_swiglu(
     rows: int, 
     hidden_dim: int,
     buffer_cols: int,
     force_scalar: bool,
-    atol: float = 2e-2,
+    atol: float = 1e-2,
     rtol: float = 0.15,
     ctol: int = 10,
 ) -> None:
@@ -42,8 +42,8 @@ def test_swiglu(
 
 if __name__ == "__main__":
 
-    NB_TOKENS = 8
-    HIDDEN_SIZE = 512
+    NB_TOKENS = 2144
+    HIDDEN_SIZE = 6656
     BUFFER_COLS = 0
     FORCE_SCALAR = False
 

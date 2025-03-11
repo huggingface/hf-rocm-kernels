@@ -5,6 +5,9 @@ from torch import Tensor
 from .binding import _swiglu
 
 
+MAX_THREADS_PER_SM = 1024
+
+
 def swiglu_checks(
     gate_up_proj: Tensor, 
     scale_tensor: Tensor, 
@@ -25,31 +28,19 @@ def swiglu_checks(
     assert gate_up_proj.is_contiguous(), f"Expected gate_up_proj to be contiguous but got {gate_up_proj.stride() = }"
     assert next_buffer.is_contiguous(), f"Expected residual to be contiguous but got {next_buffer.stride() = }"
 
-def infer_num_threads(rows: int, hidden_dim: int, force_scalar: bool, num_threads: int) -> int:
-    # If a number of threads is given, use it
-    if num_threads > 0:
+def infer_num_threads(rows: int, force_scalar: bool, num_threads: int) -> int:
+    # If a valid number of threads is given, use it
+    if num_threads > 0 and num_threads <= MAX_THREADS_PER_SM:
         return num_threads
-    
     # For non-vectorized mode, just use as many threads as possible
-    max_threads_per_sm = 1024
     if force_scalar:
-        return max_threads_per_sm
-
-    # For vectorized modes (mode > 0) use a pre-computed interpolation table
-    work = rows * hidden_dim
-    if work <= 32 * 16384:
-        return 256
-    if work <= 64 * 16384:
-        return 448
-    if work <= 128 * 16384:
-        return 64
-    if work <= 256 * 16384:
-        return 192
-    if work <= 1024 * 16384:
-        return 512
-    if work <= 2048 * 16384:
-        return 128
-    return 1024
+        return MAX_THREADS_PER_SM
+    # For vectorized mode, use a somewhat pre-computed interpolation table
+    if rows <= 8: return 64
+    if rows <= 32: return 256
+    if rows <= 2048: return 192
+    if rows <= 4096: return 512
+    return 256
 
 def swiglu(
     gate_up_proj: Tensor,
@@ -72,7 +63,7 @@ def swiglu(
     if next_buffer is None:
         next_buffer = torch.empty(size=(gate_up_proj.size(0), 0), device=gate_up_proj.device, dtype=torch.float16)
     swiglu_checks(gate_up_proj, scale_tensor, next_buffer)
-    num_threads = infer_num_threads(gate_up_proj.size(0), gate_up_proj.size(1), force_scalar, num_threads)
+    num_threads = infer_num_threads(gate_up_proj.size(0), force_scalar, num_threads)
     swiglu_out = torch.empty(
         size=(gate_up_proj.size(0), gate_up_proj.size(1) // 2), 
         dtype=torch.float8_e4m3fnuz, 

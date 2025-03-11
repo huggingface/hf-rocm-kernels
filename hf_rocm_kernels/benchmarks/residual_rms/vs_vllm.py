@@ -1,3 +1,4 @@
+import argparse
 from tqdm import tqdm
 import torch
 from typing import Optional, List
@@ -19,7 +20,7 @@ except BaseException as e:
         )
 
 
-def vllm_resdual_rms(
+def vllm_residual_rms(
     input: Tensor, 
     residual: Tensor, 
     weights: Tensor, 
@@ -39,7 +40,7 @@ def vllm_resdual_rms(
 
 def get_vllm_time(bench: Bench, rows: int, cols: int, buffer_cols: int, dtype: torch.dtype) -> float:
     input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
-    return bench.benchmark_fn(fn=lambda: vllm_resdual_rms(input, residual, weights, epsilon, scale_tensor))
+    return bench.benchmark_fn(fn=lambda: vllm_residual_rms(input, residual, weights, epsilon, scale_tensor))
 
 
 def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dtype) -> None:
@@ -64,16 +65,22 @@ def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dty
 
 if __name__ == "__main__":
 
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser.add_argument("--buffer-cols", "-b", type=int, default=13312)
+    args = parser.parse_args()
+
     run_benchmark(
-        rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
+        rows=args.rows,
         cols=16384, # to imitate Llama3.1 405B in TP8,
-        buffer_cols=13312,
+        buffer_cols=args.buffer_cols,
         dtype=torch.float8_e4m3fnuz
     )
 
     run_benchmark(
-        rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
+        rows=args.rows,
         cols=16384, # to imitate Llama3.1 405B in TP8,
-        buffer_cols=0,
+        buffer_cols=0, # no buffer in fp16 yet
         dtype=torch.float16
     )
