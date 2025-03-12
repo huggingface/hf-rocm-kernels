@@ -6,7 +6,7 @@ import torch
 from typing import List
 from tqdm import tqdm
 from hf_rocm_kernels.operators.swiglu import swiglu, generate_swiglu_data
-from hf_rocm_kernels.utils.benchmarking import Bench
+from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_cache
 
 try:
     from hf_rocm_kernels.benchmarks.swiglu.vs_vllm import get_vllm_time
@@ -16,18 +16,17 @@ except ImportError:
 
 # Parameters
 INTERMEDIATE_SIZE = 6656  # to imitate Llama3.1 405B in TP8
-BUFFER_COLS = 16384
 DTYPE = torch.float8_e4m3fnuz
 
 
-def draw_nb_threads_plot(list_rows: List[int]) -> None:
+def draw_nb_threads_plot(list_rows: List[int], buffer_cols: int) -> None:
     bench = Bench()
     for rows in list_rows:
         # Gather measures
         ns, ts = [], []
         for nthreads in tqdm([64 * i for i in range(1, 17)]):
-            gate_up_proj, scale_tensor, next_buffer = generate_swiglu_data(rows, INTERMEDIATE_SIZE, BUFFER_COLS)
-            t = bench.benchmark_fn(fn=lambda: swiglu(gate_up_proj, scale_tensor, next_buffer, num_threads=nthreads))
+            args = generate_swiglu_data(rows, INTERMEDIATE_SIZE, buffer_cols)
+            t = benchmark_cuda_graph_no_cache(swiglu, args, {"num_threads": nthreads})
             ns.append(nthreads)
             ts.append(t)
         # Find the minimum time
@@ -44,9 +43,12 @@ def draw_nb_threads_plot(list_rows: List[int]) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Benchmark swiglu operation with different thread counts")
-    parser.add_argument( "--rows", "-r", type=int, nargs="+", default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    parser.add_argument("--multiplier", "-m", type=int, default=1)
     args = parser.parse_args()
-    
-    draw_nb_threads_plot(args.rows)
+
+    rows = [r * args.multiplier for r in args.rows]
+    draw_nb_threads_plot(rows, args.buffer_cols)
 

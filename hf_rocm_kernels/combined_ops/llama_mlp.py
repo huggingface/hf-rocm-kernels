@@ -17,13 +17,13 @@ def llama_mlp_combined_ops(
     down_output_scale: Tensor,
     gate_up_gemm_hp: Tuple[Optional[int], Optional[int]] = (None, None),
     down_gemm_hp: Tuple[Optional[int], Optional[int]] = (None, None),
-) -> Tensor:
-    # Retrieve shapes and allocate buffer
-    n_tokens = attn_output.size(0)
-    intermediate_size = gate_up_weight.size(1)
-    gate_up_proj = torch.empty(size=(n_tokens, intermediate_size), dtype=torch.float16, device=attn_output.device)
+) -> Tuple[Tensor, Tensor]:
+    
     # RMS norm
-    normalized, _ = residual_rms(
+    gate_up_proj = torch.empty(
+        size=(attn_output.size(0), gate_up_weight.size(1)), dtype=torch.float16, device=attn_output.device
+    )
+    normalized, residual = residual_rms(
         input=attn_output,
         residual=residual,
         weight=rms_weight,
@@ -31,6 +31,7 @@ def llama_mlp_combined_ops(
         scale_tensor=gate_up_input_scale,
         next_buffer=gate_up_proj,
     )
+
     # Gate + up projection
     skinny_gemm(
         skinny_a=normalized,
@@ -40,19 +41,20 @@ def llama_mlp_combined_ops(
         split_k=gate_up_gemm_hp[0],
         b_lanes=gate_up_gemm_hp[1],
     )
+
     # Swiglu
-    swiglu_out = swiglu(
-        gate_up_proj=gate_up_proj,
-        scale_tensor=down_input_scale,
-        next_buffer=attn_output,
+    mlp_output = torch.empty(
+        size=(attn_output.size(0), down_weight.size(1)), dtype=torch.float16, device=attn_output.device
     )
+    swiglu_out = swiglu(gate_up_proj=gate_up_proj, scale_tensor=down_input_scale, next_buffer=mlp_output)
+
     # Down projection
     skinny_gemm(
         skinny_a=swiglu_out,
         b=down_weight,
         scale_tensor=down_output_scale,
-        output=attn_output,
+        output=mlp_output,
         split_k=down_gemm_hp[0],
         b_lanes=down_gemm_hp[1],
     )
-    return attn_output
+    return mlp_output, residual

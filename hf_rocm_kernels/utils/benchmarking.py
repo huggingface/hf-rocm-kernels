@@ -6,6 +6,66 @@ import warnings
 import itertools
 
 
+def randomize_tensors(x):
+    if isinstance(x, torch.Tensor):
+        x = x.clone().float().normal_().to(x.dtype)
+    return x
+
+def benchmark_cuda_graph_no_cache(
+    fn, args, kwargs, 
+    graph_size: int = 8,
+    warmups: int = 32,
+    iterations: int = 128,
+    device: str = "cuda",
+) -> float:
+    # Create inputs
+    list_of_args = [
+        tuple(map(randomize_tensors, args)) 
+        for _ in range(graph_size)
+    ]
+    list_of_kwargs = [
+        {k: randomize_tensors(v) for k, v in kwargs.items()}
+        for _ in range(graph_size)
+    ]
+
+    # Create a side-stream to benchmark in
+    stream = torch.cuda.Stream(device)
+    with torch.cuda.stream(stream):
+
+        # Create graph
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph):
+            for i in range(graph_size):
+                fn(*list_of_args[i], **list_of_kwargs[i])
+        torch.cuda.synchronize()
+
+        # Benchmark its replays
+        t = 0
+        for i in range(warmups + iterations):
+
+            # Prepare events
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+
+            # Clear cache
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+
+            # Run
+            start_event.record()
+            graph.replay()
+            end_event.record()
+
+            # Accumulate
+            torch.cuda.synchronize()
+            if i > warmups:
+                t += start_event.elapsed_time(end_event)
+
+    # Post-process time
+    t *= 1000 / (iterations * graph_size)
+    return t
+
+
 class Bench: 
     """An object to benchmark different version of the same operator."""
 
@@ -40,6 +100,7 @@ class Bench:
                 t = do_bench_cudagraph(fn, rep=rep)
         else:
             t = do_bench(fn, warmup=rep, rep=5*rep)
+        torch.cuda.empty_cache()
         torch.cuda.synchronize()
         return t * 1e3
     

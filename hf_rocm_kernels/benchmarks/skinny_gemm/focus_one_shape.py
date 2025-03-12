@@ -8,8 +8,8 @@ if __name__ == "__main__":
 
 
     M = 8
-    N = 16384
-    K = 6656
+    N = 2304
+    K = 16384
 
     G_SIZE = 8
     WARMUPS = 200

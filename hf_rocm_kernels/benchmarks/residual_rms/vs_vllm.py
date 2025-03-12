@@ -5,7 +5,7 @@ from typing import Optional, List
 from torch import Tensor
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
-from hf_rocm_kernels.utils.benchmarking import Bench
+from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_cache
 
 try:
     import vllm._custom_ops as ops
@@ -39,8 +39,8 @@ def vllm_residual_rms(
 
 
 def get_vllm_time(bench: Bench, rows: int, cols: int, buffer_cols: int, dtype: torch.dtype) -> float:
-    input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
-    return bench.benchmark_fn(fn=lambda: vllm_residual_rms(input, residual, weights, epsilon, scale_tensor))
+    args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)[:-1]
+    return benchmark_cuda_graph_no_cache(vllm_residual_rms, args, {})
 
 
 def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dtype) -> None:
@@ -68,11 +68,14 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
-    parser.add_argument("--buffer-cols", "-b", type=int, default=13312)
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    parser.add_argument("--multiplier", "-m", type=int, default=1)
     args = parser.parse_args()
 
+    rows = [r * args.multiplier for r in args.rows]
+
     run_benchmark(
-        rows=args.rows,
+        rows=rows,
         cols=16384, # to imitate Llama3.1 405B in TP8,
         buffer_cols=args.buffer_cols,
         dtype=torch.float8_e4m3fnuz
