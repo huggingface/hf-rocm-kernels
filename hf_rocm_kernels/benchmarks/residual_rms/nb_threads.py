@@ -1,6 +1,5 @@
 from tqdm import tqdm
 import torch
-import os
 import matplotlib.pyplot as plt
 import argparse
 from typing import List
@@ -10,7 +9,7 @@ from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_ca
 try:
     from hf_rocm_kernels.benchmarks.residual_rms.vs_vllm import get_vllm_time
 except ImportError:
-    get_vllm_time = lambda *args, **kwargs: 0
+    def get_vllm_time(*args, **kwargs): return 0
 
 
 # Parameters

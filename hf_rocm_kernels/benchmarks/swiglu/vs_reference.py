@@ -1,7 +1,4 @@
 from tqdm import tqdm
-import torch
-from typing import Optional, List
-from torch import Tensor
 
 from hf_rocm_kernels.operators.swiglu import swiglu, generate_swiglu_data, reference_swiglu
 from hf_rocm_kernels.utils.benchmarking import Bench

@@ -64,12 +64,14 @@ def infer_num_threads(rows: int, num_threads: int) -> int:
     elif num_threads != 0:
         return num_threads
     # Otherwise, we branch upon the number of rows
-    if rows <= 16:   return 1024
-    if rows <= 32:   return 768
-    if rows <= 64:   return 1024
-    if rows <= 256:  return 960
-    if rows <= 512:  return 1024
-    if rows <= 1024: return 1024
+    if rows <= 16:  
+        return 1024
+    if rows <= 32:   
+        return 768
+    if rows <= 64:   
+        return 1024
+    if rows <= 256:  
+        return 960
     return 1024
 
 def residual_rms(

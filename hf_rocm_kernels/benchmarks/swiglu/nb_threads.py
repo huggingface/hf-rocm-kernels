@@ -1,5 +1,4 @@
 
-import os
 import matplotlib.pyplot as plt
 import argparse
 import torch
@@ -11,7 +10,7 @@ from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_ca
 try:
     from hf_rocm_kernels.benchmarks.swiglu.vs_vllm import get_vllm_time
 except ImportError:
-    get_vllm_time = lambda *args, **kwargs: 0
+    def get_vllm_time(*args, **kwargs): return 0
 
 
 # Parameters

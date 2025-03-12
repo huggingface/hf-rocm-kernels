@@ -1,14 +1,15 @@
 #include "./consumer.cu"
 #include "./producer.cu"
 
-#define launch_tsr(BL, AP, BP, C, QS)                                                                        \
-    block.x = WARPSIZE * (AP + BP + C);                                                                      \
+#define launch_tsr(BL, AP, BP, C, QS)                                                                                  \
+    block.x = WARPSIZE * (AP + BP + C);                                                                                \
     _tsr_kernel<BL, AP, BP, C, QS><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, b_stride, split_k); \
     break;
 
 template <int B_LANES, int A_PRODUCERS, int B_PRODUCERS, int CONSUMERS, int QSIZE>
 void __global__ _tsr_kernel(const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D,
-                            const float* scale_tensor, const int m, const int n, const int k, const int b_stride, const int split_k) {
+                            const float* scale_tensor, const int m, const int n, const int k, const int b_stride,
+                            const int split_k) {
     // Initialize shared queue
     __shared__ int queue[2 * B_LANES * QSIZE];
     if (threadIdx.x < 2 * B_LANES * QSIZE) {
