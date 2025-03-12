@@ -1,10 +1,11 @@
+import argparse
 from tqdm import tqdm
 import torch
 from typing import Optional, List
 from torch import Tensor
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
-from hf_rocm_kernels.utils.benchmarking import Bench
+from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_cache
 
 try:
     import vllm._custom_ops as ops
@@ -19,7 +20,7 @@ except BaseException as e:
         )
 
 
-def vllm_resdual_rms(
+def vllm_residual_rms(
     input: Tensor, 
     residual: Tensor, 
     weights: Tensor, 
@@ -37,40 +38,52 @@ def vllm_resdual_rms(
     return out
 
 
-def run_benchmark(rows: List[int], cols: int, dtype: torch.dtype) -> None:
+def get_vllm_time(bench: Bench, rows: int, cols: int, buffer_cols: int, dtype: torch.dtype) -> float:
+    args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)[:-1]
+    return benchmark_cuda_graph_no_cache(vllm_residual_rms, args, {})
+
+
+def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dtype) -> None:
     bench = Bench()
     for rows in tqdm(rows, "Gathering measures"):
-        input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, 0, dtype)
-        assert next_buffer is None, f"For fair comparaison, next_buffer should be None, but got {next_buffer = }"
+        input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
         bench.add_measure(
             header="Torch (μs)", 
-            label=rows, 
+            label=rows,     
             fn=lambda: reference_residual_rms(input, residual, weights, epsilon, scale_tensor, None),
         )
-        bench.add_measure(
-            header="VLLM (μs)", 
-            label=rows, 
-            fn=lambda: vllm_resdual_rms(input, residual, weights, epsilon, scale_tensor),
-        )
+        bench.add_raw_measure(header="VLLM (μs)", label=rows, measure=get_vllm_time(bench, rows, cols, buffer_cols, dtype))
         bench.add_measure(
             header="Ours (μs)", 
-            label=rows, 
-            fn=lambda: residual_rms(input, residual, weights, epsilon, scale_tensor),
+            label=rows,     
+            fn=lambda: residual_rms(input, residual, weights, epsilon, scale_tensor, next_buffer),
         )
-    print("-" * 40, f"{dtype = }", "-" * 40)
+    bench.add_speedup_column(ref_header="VLLM (μs)", our_header="Ours (μs)")
+    print("-" * 40, f"{dtype = } AND {buffer_cols = }", "-" * 40)
     bench.display_table(row_header="Nb. rows")
 
 
 if __name__ == "__main__":
 
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    parser.add_argument("--multiplier", "-m", type=int, default=1)
+    args = parser.parse_args()
+
+    rows = [r * args.multiplier for r in args.rows]
+
     run_benchmark(
-        rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
-        cols=16384, # to imitate Llama3.1 405B in TP8
-        dtype=torch.float16
+        rows=rows,
+        cols=16384, # to imitate Llama3.1 405B in TP8,
+        buffer_cols=args.buffer_cols,
+        dtype=torch.float8_e4m3fnuz
     )
 
     run_benchmark(
-        rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048],
-        cols=16384, # to imitate Llama3.1 405B in TP8
-        dtype=torch.float8_e4m3fnuz
+        rows=args.rows,
+        cols=16384, # to imitate Llama3.1 405B in TP8,
+        buffer_cols=0, # no buffer in fp16 yet
+        dtype=torch.float16
     )

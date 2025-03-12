@@ -24,3 +24,4 @@ tunableop_results*
 .pytest_cache
 .ruff_cache
 .uv_cache
+**ignore__*

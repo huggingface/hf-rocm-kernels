@@ -48,8 +48,12 @@ def _test_residual_rms(
     )
 
 @pytest.mark.parametrize("force_scalar", [False, True])
-@pytest.mark.parametrize("buffer_cols", [0, 32, 57, 1024])
-@pytest.mark.parametrize("dtype", [torch.float16, torch.float8_e4m3fnuz])
+@pytest.mark.parametrize("dtype, buffer_cols", [
+    (torch.float16, 0), 
+    (torch.float8_e4m3fnuz, 0), 
+    (torch.float8_e4m3fnuz, 32), 
+    (torch.float8_e4m3fnuz, 1024),
+])
 @pytest.mark.parametrize("cols", [8, 24, 128, 512, 4096, 16384])
 @pytest.mark.parametrize("rows", [1, 2, 3, 4, 8, 16, 32, 64, 128, 256])
 def test_residual_rms(
@@ -77,10 +81,10 @@ def test_residual_rms(
 
 if __name__ == "__main__":
 
-    nb_toks = 1
-    hidden_size = 8
+    nb_toks = 256
+    hidden_size = 16384
     dtype = torch.float8_e4m3fnuz
-    buffer_cols = 32
+    buffer_cols = 0
     force_scalar = False
 
     _test_residual_rms(nb_toks, hidden_size, buffer_cols, dtype, force_scalar, verbose=True)

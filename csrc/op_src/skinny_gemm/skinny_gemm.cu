@@ -1,14 +1,15 @@
 #include "./consumer.cu"
 #include "./producer.cu"
 
-#define launch_tsr(BL, AP, BP, C, QS)                                                                        \
-    block.x = WARPSIZE * (AP + BP + C);                                                                      \
-    _tsr_kernel<BL, AP, BP, C, QS><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, split_k); \
+#define launch_tsr(BL, AP, BP, C, QS)                                                                                  \
+    block.x = WARPSIZE * (AP + BP + C);                                                                                \
+    _tsr_kernel<BL, AP, BP, C, QS><<<grid, block, 0, stream>>>(A_, B_, D_, scale_tensor_, m, n, k, b_stride, split_k); \
     break;
 
 template <int B_LANES, int A_PRODUCERS, int B_PRODUCERS, int CONSUMERS, int QSIZE>
 void __global__ _tsr_kernel(const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D,
-                            const float* scale_tensor, const int m, const int n, const int k, const int split_k) {
+                            const float* scale_tensor, const int m, const int n, const int k, const int b_stride,
+                            const int split_k) {
     // Initialize shared queue
     __shared__ int queue[2 * B_LANES * QSIZE];
     if (threadIdx.x < 2 * B_LANES * QSIZE) {
@@ -69,8 +70,8 @@ void __global__ _tsr_kernel(const fp8* __restrict__ A, const fp8* __restrict__ B
         }
         // B producer warp
         else if (threadIdx.x < A_PRODUCERS * WARPSIZE + B_PRODUCERS * WARPSIZE) {
-            _tsr_B_producer<B_PRODUCERS, B_LANES, QSIZE>(B + curr_n * k + curr_k, &B_buffer[0], &queue[1], index,
-                                                         p_state, role_id, k, k_blocks);
+            _tsr_B_producer<B_PRODUCERS, B_LANES, QSIZE>(B + curr_n * b_stride + curr_k, &B_buffer[0], &queue[1], index,
+                                                         p_state, role_id, b_stride, k_blocks);
         }
         // Consumers warp
         else if (threadIdx.x < (A_PRODUCERS + B_PRODUCERS + CONSUMERS) * WARPSIZE) {
@@ -104,7 +105,7 @@ void async_gemm(const fp8* __restrict__ A, const fp8* __restrict__ B, half* __re
 
     // Launch kernel
     _tsr_kernel<B_LANES_, A_PRODUCERS_, B_PRODUCERS_, CONSUMERS_, QSIZE_>
-        <<<grid, block, 0, 0>>>(A, B, D, scale_tensor, m, n, k, SK);
+        <<<grid, block, 0, 0>>>(A, B, D, scale_tensor, m, n, k, n, SK);
 }
 
 void skinny_gemm(torch::Tensor& A, torch::Tensor& B, torch::Tensor& D, torch::Tensor& scale_tensor, int64_t b_lanes,
@@ -112,6 +113,7 @@ void skinny_gemm(torch::Tensor& A, torch::Tensor& B, torch::Tensor& D, torch::Te
     const int m = A.size(0);
     const int n = B.size(1);
     const int k = A.size(1);
+    const int b_stride = B.stride(1);
 
     const fp8* __restrict__ A_ = (const fp8* __restrict__)A.data_ptr();
     const fp8* __restrict__ B_ = (const fp8* __restrict__)B.data_ptr();
