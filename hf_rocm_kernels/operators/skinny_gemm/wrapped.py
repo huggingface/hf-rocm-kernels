@@ -36,7 +36,7 @@ def skinny_gemm_checks(
     assert output.device == device, f"Expected {output.device = } to be the same as {device = }"
 
 def skinny_gemm(
-    skinny_a: Tensor, 
+    skinny_a: Tensor,
     b: Tensor,
     scale_tensor: Tensor,
     output: Optional[Tensor] = None,

@@ -6,7 +6,7 @@ from hf_rocm_kernels.utils.fp8 import fp8_quantize
 
 
 def reference_skinny_gemm(
-    skinny_a: Tensor, 
+    skinny_a: Tensor,
     b: Tensor,
     scale_a: Tensor,
     scale_b: Tensor,

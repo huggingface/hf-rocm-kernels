@@ -12,4 +12,4 @@
 
 #define CDIV(a, b) ((a + b - 1) / (b))
 
-#define FP8_MAX 224.0f // TODO: check if this or 448.0f
+#define FP8_MAX 224.0f  // TODO: check if this or 448.0f

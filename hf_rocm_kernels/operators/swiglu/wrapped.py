@@ -36,13 +36,13 @@ def infer_num_threads(rows: int, force_scalar: bool, num_threads: int) -> int:
     if force_scalar:
         return MAX_THREADS_PER_SM
     # For vectorized mode, use a somewhat pre-computed interpolation table
-    if rows <= 8: 
+    if rows <= 8:
         return 64
-    if rows <= 64: 
+    if rows <= 64:
         return 256
-    if rows <= 2048: 
+    if rows <= 2048:
         return 192
-    if rows <= 4096: 
+    if rows <= 4096:
         return 512
     return 256
 
