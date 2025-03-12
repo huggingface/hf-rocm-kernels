@@ -101,7 +101,7 @@ void __device__ _tsr_A_producer(const fp8* __restrict__ src, fp8* buffer, int* q
 
 template <int B_PRODUCERS, int B_LANES, int QSIZE>
 void __device__ _tsr_B_producer(const fp8* __restrict__ source, fp8* buffer, int* queue, int& index, int& p_state,
-                                int& role_id, const int k, const int k_blocks) {
+                                int& role_id, const int b_stride, const int k_blocks) {
     static constexpr int elems_per_thread = 16;
     static constexpr int threads_per_ld = 4;
 
@@ -113,7 +113,7 @@ void __device__ _tsr_B_producer(const fp8* __restrict__ source, fp8* buffer, int
     const int curr_ad = thread_id / threads_per_ld;
 
     // Relocate thread in source (and queue for B producers)
-    source += curr_ad * k;
+    source += curr_ad * b_stride;
     source += curr_ld;
 
     // Relocate thread in buffer
@@ -134,7 +134,7 @@ void __device__ _tsr_B_producer(const fp8* __restrict__ source, fp8* buffer, int
     while (b < B_LANES * k_blocks) {
         // Account for cyclic queue
         index -= (index >= QSIZE * B_LANES) ? QSIZE * B_LANES : 0;
-        src = source + (b / B_LANES) * WARPTILE_K + (b % B_LANES) * OP_N * k;
+        src = source + (b / B_LANES) * WARPTILE_K + (b % B_LANES) * OP_N * b_stride;
         buf = buffer + index * (OP_N * WARPTILE_K);
 
         asm volatile(
