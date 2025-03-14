@@ -21,7 +21,7 @@ def skinny_gemm_checks(
         f"{output.shape} does not match with {skinny_a.shape = } and {b.shape =}" )
     # Check layouts
     assert skinny_a.is_contiguous(), f"Expected skinny_a to be contiguous but got {skinny_a.stride() = }"
-    assert b.stride(0) == 1, f"Expected b to be column-major but got {b.stride() = }"
+    assert b.stride(0) == 1, f"Expected b to be column-contiguous but got {b.stride() = }"
     assert output.is_contiguous(), f"Expected output to be contiguous but got {output.stride() = }"
     # Check dtypes
     assert skinny_a.dtype == torch.float8_e4m3fnuz, f"Expected {skinny_a.dtype = } to be torch.float8_e4m3fnuz"
