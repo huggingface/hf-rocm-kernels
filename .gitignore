@@ -25,3 +25,5 @@ tunableop_results*
 .ruff_cache
 .uv_cache
 **ignore__*
+
+*.hip

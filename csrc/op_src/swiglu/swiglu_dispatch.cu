@@ -2,8 +2,8 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <hip/hip_runtime.h>
 
-#include "op_src/swiglu/swiglu_scalar.cu"
-#include "op_src/swiglu/swiglu_vectorized.cu"
+#include "swiglu_scalar.cu"
+#include "swiglu_vectorized.cu"
 
 void swiglu(torch::Tensor& gate_up,       // Shape: [m, 2*n] / Layout: row-major / Dtype: fp16
             torch::Tensor& scale_tensor,  // Shape: [1,    ] / Layout: row-major / Dtype: fp32

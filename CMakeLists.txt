@@ -82,6 +82,7 @@ endif()
 # etc.
 #
 find_package(Torch REQUIRED)
+find_package(hip REQUIRED)
 
 #
 # Forward the non-CUDA device extensions to external CMake scripts.
@@ -167,6 +168,7 @@ set(KERNEL_SRC
   "csrc/op_src/residual_rms/residual_rms_dispatch.cu"
   "csrc/op_src/swiglu/swiglu_dispatch.cu"
   "csrc/op_src/skinny_gemm/skinny_gemm.cu"
+  "csrc/op_src/fused_gemm_ar/allreduce.cu"
 )
 
 message(STATUS "Enabling C extension.")

@@ -4,7 +4,7 @@ from torch import Tensor
 #import hf_rocm_kernels._HFRK_C # noqa: F401
 
 
-def _skinny_gemm(
+def _fused_gemm_ar(
     A: Tensor,
     B: Tensor,
     scale_tensor: Tensor,
@@ -12,4 +12,4 @@ def _skinny_gemm(
     b_lanes: int,
     split_k: int,
 ) -> None:
-    torch.hfrk.skinny_gemm(A, B, D, scale_tensor, b_lanes, split_k)
+    torch.hfrk.fused_gemm_ar(A, B, D, scale_tensor, b_lanes, split_k)

@@ -17,26 +17,35 @@
 // Pay close attention to whether or not your tensor is modified inplace during
 // the operation: if it is the case, then add a ! after "Tensor"
 
-TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
+TORCH_LIBRARY_IMPL(hfrk, CUDA, m) {
     // Increment operator
-    ops.def("increment(Tensor! x) -> ()");
-    ops.impl("increment", torch::kCUDA, &increment);
+    m.def("increment(Tensor! x) -> ()");
+    m.impl("increment", increment);
 
     // Residual + RMS operator
-    ops.def(
+    m.def(
         "residual_rms(Tensor input, Tensor! residual, Tensor weight, Tensor scale_tensor, float epsilon, Tensor! "
         "output, Tensor! next_buffer, int num_threads, bool force_scalar) -> ()");
-    ops.impl("residual_rms", torch::kCUDA, &residual_rms);
+    m.impl("residual_rms", &residual_rms);
 
     // Swiglu
-    ops.def(
+    m.def(
         "swiglu(Tensor gate_up, Tensor scale_tensor, Tensor! output, Tensor! next_buffer, int num_threads, "
         "bool force_scalar) -> ()");
-    ops.impl("swiglu", torch::kCUDA, &swiglu);
+    m.impl("swiglu", &swiglu);
 
     // Skinny GEMM
-    ops.def("skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
-    ops.impl("skinny_gemm", torch::kCUDA, &skinny_gemm);
+    m.def("skinny_gemm(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int b_lanes, int split_k) -> ()");
+    m.impl("skinny_gemm", &skinny_gemm);
+
+
+    // Fused skinny GEMM allreduce
+    // Initialization
+    m.def("all_reduce_init(int rank, int, worldSize, int port, Tensor comms_buff_A, Tensor comms_buff_B) -> int");
+    m.impl("all_reduce_init", &all_reduce_init);
+    // Calling
+    m.def("all_reduce(int allreduce_engine_ptr, Tensor A, Tensor B, Tensor D, Tensor scale_tensor, int b_lanes, int split_k, bool is_capturing) -> Tensor");
+    m.impl("all_reduce", &all_reduce);
 }
 
-REGISTER_EXTENSION(TORCH_EXTENSION_NAME)
+REGISTER_EXTENSION(hfrk)
