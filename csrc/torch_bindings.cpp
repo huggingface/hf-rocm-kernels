@@ -35,8 +35,9 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     ops.impl("swiglu", torch::kCUDA, &swiglu);
 
     // Skinny GEMM
-    ops.def("skinny_gemm_tb(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int split_k, int A_producers, "
-            "int B_producers, int consumers, int a_lanes, int b_lanes, int qsize, int op_m, int ops) -> int");
+    ops.def(
+        "skinny_gemm_tb(Tensor A, Tensor B, Tensor! D, Tensor scale_tensor, int split_k, int A_producers, "
+        "int B_producers, int consumers, int a_lanes, int b_lanes, int qsize, int op_m, int ops) -> int");
     ops.impl("skinny_gemm_tb", torch::kCUDA, &skinny_gemm_tb);
 }
 
