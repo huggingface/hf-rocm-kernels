@@ -76,7 +76,8 @@ void __device__ consume_tiles_sparse_16x16x64(
                 consumer_smem_to_reg(A_offs_buff + (a_lane * OP_M * WARPTILE_K) + (op * OP_M * OP_K), reg_A[a_lane][op]);
             }
             // Mark A buffer as consumed
-            // DEBUG: disabled this because not needed in practice // asm volatile("s_waitcnt lgkmcnt(0)");
+            // TODO: figure out if this is needed in practice (fails really really not often)
+            asm volatile("s_waitcnt lgkmcnt(0)");
             a_queue[A_LANES * index + a_lane] = p_state + 1;
         }
 
@@ -94,7 +95,8 @@ void __device__ consume_tiles_sparse_16x16x64(
                 consumer_smem_to_reg(B_offs_buff + (b_lane * OP_N * WARPTILE_K) + (op * OP_N * OP_K), reg_B[op]);
             }
             // Mark B buffer as consumed
-            // DEBUG: disabled this because not needed in practice // asm volatile("s_waitcnt lgkmcnt(0)");
+            // TODO: figure out if this is needed in practice (fails really really not often)
+            // asm volatile("s_waitcnt lgkmcnt(0)");
             b_queue[B_LANES * index + b_lane] = p_state + 1;
 
             // Go through all A lanes

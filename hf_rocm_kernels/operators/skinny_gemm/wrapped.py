@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Tuple
 import torch
 from torch import Tensor
+from math import ceil
 
 from .binding import _skinny_gemm
 
@@ -74,27 +75,31 @@ def infer_skinny_gemm_params(skinny_a: Tensor, b: Tensor) -> Dict[str, int]:
         else:
             return {"A_producers": 3, "B_producers": 6, "consumers": 3, "split_k": 1,
                     "a_lanes": 2, "b_lanes": 3, "qsize": 3, "op_m": 16, "ops": 8} # 69.251 ± 1.794 -> 116.40%
-            # return {"A_producers": 5, "B_producers": 7, "consumers": 4, "split_k": 1,
-            #         "a_lanes": 2, "b_lanes": 3, "qsize": 4, "op_m": 16, "ops": 4}
     # Down projection
     if (n, k) == (16384, 6656):
         if m <= 8:
             return {"A_producers": 2, "B_producers": 7, "consumers": 2, "split_k": 1,
                     "a_lanes": 1, "b_lanes": 4, "qsize": 2, "op_m": 8, "ops": 4} # 28.668 ± 0.275 -> 112.45 %
         if m <= 16:
-            # return {"A_producers": 3, "B_producers": 2, "consumers": 3, "split_k": 1,
-            #         "a_lanes": 1, "b_lanes": 2, "qsize": 3, "op_m": 8, "ops": 8}
             return {"A_producers": 2, "B_producers": 5, "consumers": 3, "split_k": 1,
                     "a_lanes": 1, "b_lanes": 4, "qsize": 3, "op_m": 16, "ops": 8}
         else:
             return {"A_producers": 2, "B_producers": 4, "consumers": 2, "split_k": 1,
                     "a_lanes": 2, "b_lanes": 4, "qsize": 2, "ops": 8, "op_m": 16}
-    # QKV
-    # if (n, k) == (2304, 16384):
-        # if m == 32:
-            # return {"A_producers": 3, "B_producers": 2, "consumers": 3, "split_k": 1,
-            #         "a_lanes": 1, "b_lanes": 2, "qsize": 3, "op_m": 8, "ops": 8}
-    return {"A_producers": 4, "B_producers": 4, "consumers": 2, "b_lanes": 3, "qsize": 2, "ops": 4, "split_k": 1}
+    # Default
+    op_m = 8 if m <= 8 else 16
+    ops = 4 if op_m == 8 else 8
+    a_lanes = 2 if m > 16 else 1
+    b_lanes = n // (304 * 16)
+    b_lanes = min(4, max(1, b_lanes))
+    qsize = 3
+    consumers = 3 # = qsize
+    A_producers = 3 # = qsize
+    B_producers = min(6, qsize * b_lanes)
+    split_k = max(1, 304 // ceil(n / (16 * b_lanes)))
+    return {"A_producers": A_producers, "B_producers": B_producers, "consumers": consumers,
+            "a_lanes": a_lanes, "b_lanes": b_lanes,
+            "qsize": qsize, "op_m": op_m, "ops": ops, "split_k": split_k}
 
 def skinny_gemm(
     skinny_a: Tensor,

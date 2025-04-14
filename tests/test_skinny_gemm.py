@@ -18,21 +18,19 @@ def _test_skinny_gemm(m: int, n: int, k: int, verbose: bool) -> Tuple[float, flo
     # Crunch error metrics on each output and maybe display them
     return compare_x_with_ref(output.float(), ref_output.float(), "output" if verbose else None)
 
-@pytest.mark.parametrize("split_k", [1, 2, 3, 4, 6, 8])
-@pytest.mark.parametrize("b_lanes", [3, 5])
+@pytest.mark.parametrize("repeat_id", "abcde")
 @pytest.mark.parametrize("k", [256, 1024, 16384])
 @pytest.mark.parametrize("n", [128, 1024, 6656, 13312])
-@pytest.mark.parametrize("m", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16])
+@pytest.mark.parametrize("m", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 32])
 def test_skinny_gemm(
     m: int,
     n: int,
     k: int,
-    split_k: int,
-    b_lanes: int,
+    repeat_id: str,
     atol: float = 0.125,
 ) -> None:
     """Pytested version of the swiglu test. Threshold are not final."""
-    max_error, max_relative_error, changes =  _test_skinny_gemm(m, n, k, split_k, b_lanes, verbose=False)
+    max_error, max_relative_error, changes =  _test_skinny_gemm(m, n, k, verbose=False)
     assert max_error <= atol
     # WARNING: not passed AT ALL - assert max_relative_error < rtol
     # WARNING: not passed AT ALL - assert changes < ctol
