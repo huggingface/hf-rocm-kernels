@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Dict, Optional, Tuple
 import torch
 from torch import Tensor
+from math import ceil
 
 from .binding import _skinny_gemm
 
@@ -11,8 +12,6 @@ def skinny_gemm_checks(
     scale_tensor: Tensor,
     output: Tensor,
 ) -> None:
-    # Temporary restrictions (TODO)
-    assert skinny_a.size(0) <= 16, f"Right now, {skinny_a.size(0) = } must be below 16."
     # Check shapes
     assert skinny_a.dim() == 2, f"Expected skinny_a to have 2 dimensions but got {skinny_a.dim() = } instead."
     assert skinny_a.size(1) == b.size(0), f"Expected {skinny_a.size(1) = } and {b.size(0) = } to be the same."
@@ -35,13 +34,78 @@ def skinny_gemm_checks(
     assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {device = }"
     assert output.device == device, f"Expected {output.device = } to be the same as {device = }"
 
+def infer_skinny_gemm_m_params(m: int) -> Tuple[int, int]:
+    a_lanes = 2 if m > 16 else 1
+    op_m = 16 if m > 8 else 8
+    return a_lanes, op_m
+
+def infer_skinny_gemm_params(skinny_a: Tensor, b: Tensor) -> Dict[str, int]:
+    m, k = skinny_a.shape
+    n = b.shape[1]
+    # Output projection
+    if (n, k) == (16384, 2048):
+        if m <= 8:
+            return {"A_producers": 3, "B_producers": 5, "consumers": 2, "split_k": 1,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 3, "op_m": 8, "ops": 4} # 11.114 ± 0.275 -> 104.06%
+        if m <= 16:
+            return {"A_producers": 2, "B_producers": 3, "consumers": 2, "split_k": 1,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 2, "op_m": 16, "ops": 8}
+        else:
+            return {"A_producers": 2, "B_producers": 4, "consumers": 2, "split_k": 1,
+                    "a_lanes": 2, "b_lanes": 4, "qsize": 3, "op_m": 16, "ops": 4}
+    # QKV projection
+    if (n, k) == (2304, 16384):
+        if m <= 8:
+            return {"A_producers": 3, "B_producers": 6, "consumers": 2, "split_k": 16,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 3, "op_m": 8, "ops": 4} # 12.485 ± 0.241
+        if m <= 16:
+            return {"A_producers": 3, "B_producers": 4, "consumers": 2, "split_k": 8,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 3, "op_m": 16, "ops": 8} # 14.301 ± 0.108
+        else:
+            return {"A_producers": 2, "B_producers": 4, "consumers": 2, "split_k": 8,
+                    "a_lanes": 2, "b_lanes": 4, "qsize": 2, "op_m": 16, "ops": 8} # 17.220 ± 0.183
+    # Gate / up projection
+    if (n, k) == (13312, 16384):
+        if m <= 8:
+            return {"A_producers": 3, "B_producers": 6, "consumers": 2, "split_k": 3,
+                    "a_lanes": 1, "b_lanes": 3, "qsize": 4, "op_m": 8, "ops": 4} # 131.06%
+        if m <= 16:
+            return {"A_producers": 2, "B_producers": 5, "consumers": 3, "split_k": 3,
+                    "a_lanes": 1, "b_lanes": 3, "qsize": 3, "op_m": 16, "ops": 8} # 62.136 ± 1.008 -> 118.38%
+        else:
+            return {"A_producers": 3, "B_producers": 6, "consumers": 3, "split_k": 1,
+                    "a_lanes": 2, "b_lanes": 3, "qsize": 3, "op_m": 16, "ops": 8} # 69.251 ± 1.794 -> 116.40%
+    # Down projection
+    if (n, k) == (16384, 6656):
+        if m <= 8:
+            return {"A_producers": 2, "B_producers": 7, "consumers": 2, "split_k": 1,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 2, "op_m": 8, "ops": 4} # 28.668 ± 0.275 -> 112.45 %
+        if m <= 16:
+            return {"A_producers": 2, "B_producers": 5, "consumers": 3, "split_k": 1,
+                    "a_lanes": 1, "b_lanes": 4, "qsize": 3, "op_m": 16, "ops": 8}
+        else:
+            return {"A_producers": 2, "B_producers": 4, "consumers": 2, "split_k": 1,
+                    "a_lanes": 2, "b_lanes": 4, "qsize": 2, "ops": 8, "op_m": 16}
+    # Default
+    op_m = 8 if m <= 8 else 16
+    ops = 4 if op_m == 8 else 8
+    a_lanes = 2 if m > 16 else 1
+    b_lanes = n // (304 * 16)
+    b_lanes = min(4, max(1, b_lanes))
+    qsize = 3
+    consumers = 3 # = qsize
+    A_producers = 3 # = qsize
+    B_producers = min(6, qsize * b_lanes)
+    split_k = max(1, 304 // ceil(n / (16 * b_lanes)))
+    return {"A_producers": A_producers, "B_producers": B_producers, "consumers": consumers,
+            "a_lanes": a_lanes, "b_lanes": b_lanes,
+            "qsize": qsize, "op_m": op_m, "ops": ops, "split_k": split_k}
+
 def skinny_gemm(
     skinny_a: Tensor,
     b: Tensor,
     scale_tensor: Tensor,
     output: Optional[Tensor] = None,
-    split_k: Optional[int] = None,
-    b_lanes: Optional[int] = None,
 ) -> Tensor:
     """Skinny GEMM kernel that leverages artifical sparsity.
     Args:
@@ -56,8 +120,28 @@ def skinny_gemm(
     if output is None:
         output = torch.zeros(size=(skinny_a.size(0), b.size(1)), dtype=torch.float16, device=skinny_a.device)
     skinny_gemm_checks(skinny_a, b, scale_tensor, output)
-    split_k = 1 if split_k is None else split_k
-    b_lanes = 3 if b_lanes is None else b_lanes
-    assert b_lanes in [2, 3, 4, 5]
-    _skinny_gemm(skinny_a, b, scale_tensor, output, b_lanes, split_k)
+    kwargs = infer_skinny_gemm_params(skinny_a, b)
+    _skinny_gemm(
+        A=skinny_a, B=b, scale_tensor=scale_tensor, D=output,
+        **kwargs
+    )
     return output
+
+
+# def infer_skinny_gemm_other_params(skinny_a: Tensor, b: Tensor) -> Tuple[int, int, int, int, int, int]:
+#     # A, B, C,   Bl, Qs, Ops   Sk
+#     m, k = skinny_a.shape
+#     n = b.shape[1]
+#     # Gate / up projection
+#     if (n, k) == (13312, 16384):
+#         if m == 32:
+#             return 5, 7, 4,   3, 4,   1
+#         else:
+#             return 2, 6, 3,   3, 3,   3
+#     # Down projection
+#     if (n, k) == (16384, 6656):
+#         if m == 32:
+#             return 3, 5, 2,   4, 2,   1
+#         else:
+#             return 2, 6, 3,   3, 3,   3
+#     return 2, 6, 3,   3, 3,   3

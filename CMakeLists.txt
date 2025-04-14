@@ -166,7 +166,7 @@ set(KERNEL_SRC
   "csrc/op_src/increment/increment_op.cu"
   "csrc/op_src/residual_rms/residual_rms_dispatch.cu"
   "csrc/op_src/swiglu/swiglu_dispatch.cu"
-  "csrc/op_src/skinny_gemm/skinny_gemm.cu"
+  "csrc/op_src/skinny_gemm/skinny_gemm_binding.cu"
   "csrc/op_src/fused_gemm_ar/allreduce.cu"
 )
 
@@ -179,8 +179,6 @@ set(COMPILE_FLAGS
   "-U__HIP_NO_HALF_CONVERSIONS__"
   "-U__HIP_NO_HALF_OPERATORS__"
 )
-message("${COMPILE_FLAGS}")
-
 
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(
