@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 from hf_rocm_kernels.operators.skinny_gemm.benchmarking_fn import benchmark_skinny_gemm
-from hf_rocm_kernels.utils.benchmarking import Bench
 from hf_rocm_kernels.operators.skinny_gemm import generate_skinny_gemm_data
 from hf_rocm_kernels.operators.skinny_gemm.binding import _skinny_gemm
 

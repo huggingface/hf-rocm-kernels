@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, reference_residual_rms, generate_residual_rms_data, precise_residual_rms
-from hf_rocm_kernels.utils.testing import compare_x_with_ref, compare_x_and_ref_to_precise
+from hf_rocm_kernels.utils.testing import compare_x_and_ref_to_precise
 
 
 def _test_residual_rms(

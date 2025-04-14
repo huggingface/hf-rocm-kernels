@@ -121,7 +121,7 @@ def skinny_gemm(
         output = torch.zeros(size=(skinny_a.size(0), b.size(1)), dtype=torch.float16, device=skinny_a.device)
     skinny_gemm_checks(skinny_a, b, scale_tensor, output)
     kwargs = infer_skinny_gemm_params(skinny_a, b)
-    code = _skinny_gemm(
+    _skinny_gemm(
         A=skinny_a, B=b, scale_tensor=scale_tensor, D=output,
         **kwargs
     )

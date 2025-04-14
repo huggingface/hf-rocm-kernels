@@ -1,9 +1,3 @@
-import torch
-import matplotlib.pyplot as plt
-import json
-from math import ceil
-import itertools
-import random
 from hf_rocm_kernels.operators.skinny_gemm.benchmarking_fn import benchmark_skinny_gemm
 from hf_rocm_kernels.utils.benchmarking import Bench
 
