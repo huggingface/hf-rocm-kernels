@@ -14,17 +14,17 @@ try:
 except BaseException as e:
     if isinstance(e, ImportError):
         raise ModuleNotFoundError("It seems you don't have VLLM installed. Get it from: https://github.com/rocm/vllm")
-    else: 
+    else:
         raise NotImplementedError(
             "It seems you  don't have the right version of VLLM installed. Get it from https://github.com/rocm/vllm"
         )
 
 
 def vllm_residual_rms(
-    input: Tensor, 
-    residual: Tensor, 
-    weights: Tensor, 
-    epsilon: float, 
+    input: Tensor,
+    residual: Tensor,
+    weights: Tensor,
+    epsilon: float,
     scale_tensor: Optional[Tensor],
 ) -> Tensor:
     # Case: fp16
@@ -48,14 +48,18 @@ def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dty
     for rows in tqdm(rows, "Gathering measures"):
         input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
         bench.add_measure(
-            header="Torch (μs)", 
-            label=rows,     
+            header="Torch (μs)",
+            label=rows,
             fn=lambda: reference_residual_rms(input, residual, weights, epsilon, scale_tensor, None),
         )
-        bench.add_raw_measure(header="VLLM (μs)", label=rows, measure=get_vllm_time(bench, rows, cols, buffer_cols, dtype))
         bench.add_measure(
-            header="Ours (μs)", 
-            label=rows,     
+            header="VLLM (μs)",
+            label=rows,
+            fn=lambda: vllm_residual_rms(input, residual, weights, epsilon, scale_tensor),
+        )
+        bench.add_measure(
+            header="Ours (μs)",
+            label=rows,
             fn=lambda: residual_rms(input, residual, weights, epsilon, scale_tensor, next_buffer),
         )
     bench.add_speedup_column(ref_header="VLLM (μs)", our_header="Ours (μs)")

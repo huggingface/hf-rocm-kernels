@@ -12,7 +12,7 @@ def randomize_tensors(x):
     return x
 
 def benchmark_cuda_graph_no_cache(
-    fn, args, kwargs, 
+    fn, args, kwargs,
     graph_size: int = 8,
     warmups: int = 32,
     iterations: int = 128,
@@ -20,7 +20,7 @@ def benchmark_cuda_graph_no_cache(
 ) -> float:
     # Create inputs
     list_of_args = [
-        tuple(map(randomize_tensors, args)) 
+        tuple(map(randomize_tensors, args))
         for _ in range(graph_size)
     ]
     list_of_kwargs = [
@@ -66,7 +66,7 @@ def benchmark_cuda_graph_no_cache(
     return t
 
 
-class Bench: 
+class Bench:
     """An object to benchmark different version of the same operator."""
 
     def __init__(self) -> None:
@@ -93,17 +93,18 @@ class Bench:
             warnings.warn(f"Device {torch.cuda.current_device()} is not fully free: {metrics = }")
         return metrics
 
-    def benchmark_fn(self, fn: Callable[[], None], rep: int = 100, cg: bool = True) -> float:
+    @classmethod
+    def benchmark_fn(cls, fn: Callable[[], None], rep: int = 100, warmup: int = -1) -> float:
         """Benchmarks a function using triton's cuda graphs's benchmark."""
-        if cg:
+        if warmup < 0:
             with torch.cuda.stream(torch.cuda.Stream()):
                 t = do_bench_cudagraph(fn, rep=rep)
         else:
-            t = do_bench(fn, warmup=rep, rep=5*rep)
+            t = do_bench(fn, warmup=warmup, rep=rep)
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         return t * 1e3
-    
+
     def add_measure(self, header: str, label: int, fn: Callable[[], None], rep: int = 100) -> float:
         t = self.benchmark_fn(fn, rep)
         self.add_raw_measure(header, label, t)
