@@ -10,7 +10,7 @@ def reference_residual_rms(
     weight: Tensor,
     epsilon: float,
     scale_tensor: Optional[Tensor],
-    next_buffer: Optional[Tensor],
+    next_buffer: Optional[Tensor] = None,
 ) -> Tuple[Tensor, Tensor, float]:
     """Reference for the residual_rms operation. Check its docstring for more details, the only difference here is that
     the scale needs to be passed a tensor and not a float."""
@@ -34,6 +34,36 @@ def reference_residual_rms(
     else:
         qinput = input
     return qinput, residual, scale_tensor
+
+
+def precise_residual_rms(
+    input: Tensor,
+    residual: Tensor,
+    weight: Tensor,
+    epsilon: float,
+    scale_tensor: Optional[Tensor],
+    next_buffer: Optional[Tensor] = None,
+) -> Tuple[Tensor, Tensor]:
+    """Reference for the residual_rms operation. Check its docstring for more details, the only difference here is that
+    the scale needs to be passed a tensor and not a float."""
+    # Conversion to fp64
+    input = input.to(torch.float64)
+    residual = residual.to(torch.float64)
+    weight = weight.to(torch.float64)
+    # FastRMSNorm
+    input += residual
+    residual = input
+    input = reference_rms(input, epsilon)
+    input = weight * input
+    if scale_tensor is not None:
+        # Convert to fp8
+        qinput, scale_tensor = fp8_quantize(input, scale_tensor)
+        # Zero-init the next buffer
+        if next_buffer is not None:
+            next_buffer.fill_(0)
+    else:
+        qinput = input
+    return qinput, residual
 
 
 def reference_rms(x: Tensor, eps: float) -> Tensor:
