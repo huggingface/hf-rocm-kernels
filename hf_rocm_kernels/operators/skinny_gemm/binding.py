@@ -9,7 +9,20 @@ def _skinny_gemm(
     B: Tensor,
     scale_tensor: Tensor,
     D: Tensor,
-    b_lanes: int,
     split_k: int,
-) -> None:
-    torch.ops._HFRK_C.skinny_gemm(A, B, D, scale_tensor, b_lanes, split_k)
+    A_producers: int,
+    B_producers: int,
+    consumers: int,
+    a_lanes: int,
+    b_lanes: int,
+    qsize: int,
+    op_m: int,
+    ops: int,
+) -> int:
+    return torch.ops._HFRK_C.skinny_gemm_tb(
+        A, B, D, scale_tensor,
+        split_k,
+        A_producers, B_producers, consumers,
+        a_lanes, b_lanes, qsize,
+        op_m, ops
+    )
