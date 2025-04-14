@@ -49,3 +49,32 @@ def compare_x_with_ref(x: Tensor, ref: Tensor, name: Optional[str] = None) -> Tu
                 print(f"\n#-- NANs of {name} --#\nReference: {ref_nans}\nComputed:{x_nans}\n")
     # Return the relevant metrics
     return max_delta, max_relative_delta, nb_changed_coeffs
+
+
+def compare_x_and_ref_to_precise(x: Tensor, ref: Tensor, precise: Tensor) -> Tuple[float, ...]:
+    """Compares the outpout of one operation (x) and the output of the reference operation (ref) with the output of a
+    operation with a higher precision (precise). Returns True if x is closer to precise than ref is."""
+    # Check shapes
+    if x.shape != ref.shape:
+        raise ValueError(f"Cannot compare tensor of shape {x.shape} with reference of shape {ref.shape}.")
+    if x.shape != precise.shape:
+        raise ValueError(f"Cannot compare tensor of shape {x.shape} with precise of shape {precise.shape}.")
+    # Compute metrics
+    delta_x = (precise.float() - x.float()).abs()
+    delta_ref = (precise.float() - ref.float()).abs()
+    # Compute the max for each delta
+    delta_x_max = delta_x.max().item()
+    delta_ref_max = delta_ref.max().item()
+    # Compute the mean for each delta
+    delta_x_mean = delta_x.mean().item()
+    delta_ref_mean = delta_ref.mean().item()
+    # Compute the regression points
+    regression_mask = (delta_x > delta_ref)
+    regression_percentage = regression_mask.float().mean().item() * 100
+    reggresion_max = (delta_x * regression_mask).max().item()
+    reggresion_mean = (delta_x * regression_mask).mean().item()
+    return (
+        delta_x_max, delta_ref_max,
+        delta_x_mean, delta_ref_mean,
+        regression_percentage, reggresion_max, reggresion_mean
+    )
