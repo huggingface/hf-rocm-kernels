@@ -8,7 +8,7 @@
 
 #include "utils/macros.h"
 
-#define USE_SMEM true
+#define USE_SMEM true  // TODO: figure out if this is needed in practice
 
 template <typename T, bool clean_next_buffer>
 __global__ void _residual_rms_vectorized(const half* __restrict__ input, half* __restrict__ residual,
