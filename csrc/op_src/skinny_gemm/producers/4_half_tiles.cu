@@ -2,19 +2,10 @@
 
 // WARNING / TODO : tiles always hit cache AND are swizzled
 // TODO : add support for LANES > 1
-template<int LANES, int QSIZE, int OPS>
-void __device__ produce_4_half_tiles(
-    const fp8* __restrict__ src,
-    fp8* buffer,
-    const int producers,
-    int* queue,
-    int &index,
-    int &p_state,
-    int &role_id,
-    const int dropped_ad,
-    const int k,
-    const int k_blocks
-) {
+template <int LANES, int QSIZE, int OPS>
+void __device__ produce_4_half_tiles(const fp8* __restrict__ src, fp8* buffer, const int producers, int* queue,
+                                     int& index, int& p_state, int& role_id, const int dropped_ad, const int k,
+                                     const int k_blocks) {
     // Compile-time constants
     static constexpr int E_PER_THREAD = 16;
     static constexpr int E_PER_BANK = 4;
@@ -53,7 +44,6 @@ void __device__ produce_4_half_tiles(
     int b = (OPS == 1 ? 2 : 1) * role_id;
 
     while (b < LANES * k_blocks) {
-
         // Account for cyclic queue
         index -= (index >= LANES * QSIZE) ? QSIZE : 0;
         buf = reinterpret_cast<fp8_4*>(buffer) + index * (OP_M * WARPTILE_K / 4);
@@ -63,8 +53,7 @@ void __device__ produce_4_half_tiles(
             "global_load_dwordx4 %0, %2, off offset:0  \n\t"
             "global_load_dwordx4 %1, %2, off offset:128\n\t"
             : "=v"(reg0), "=v"(reg1)
-            : "v"(src)
-        );
+            : "v"(src));
 
         // Wait for buffer to be consumed
         while (queue[index] != p_state) {
@@ -83,9 +72,8 @@ void __device__ produce_4_half_tiles(
             "v_swap_b32 %2, %5\n\t"
             "v_swap_b32 %3, %7"
             : "=v"(swap_reg[0]), "=v"(swap_reg[1]), "=v"(swap_reg[2]), "=v"(swap_reg[3])
-            : "v"(reg0[0]), "v"(reg0[1]), "v"(reg0[2]), "v"(reg0[3])
-        );
-        #pragma unroll
+            : "v"(reg0[0]), "v"(reg0[1]), "v"(reg0[2]), "v"(reg0[3]));
+#pragma unroll
         for (int line = 0; line < 4; line++) {
             buf[line * 32] = reg0[line];
         }
@@ -102,9 +90,8 @@ void __device__ produce_4_half_tiles(
             "v_swap_b32 %2, %5\n\t"
             "v_swap_b32 %3, %7"
             : "=v"(swap_reg[0]), "=v"(swap_reg[1]), "=v"(swap_reg[2]), "=v"(swap_reg[3])
-            : "v"(reg1[0]), "v"(reg1[1]), "v"(reg1[2]), "v"(reg1[3])
-        );
-        #pragma unroll
+            : "v"(reg1[0]), "v"(reg1[1]), "v"(reg1[2]), "v"(reg1[3]));
+#pragma unroll
         for (int line = 0; line < 4; line++) {
             buf[line * 32 + OP_K * OP_M / 2] = reg1[line];
         }
@@ -122,5 +109,5 @@ void __device__ produce_4_half_tiles(
     }
 
     // Bring warps back in order
-    role_id = (b - k_blocks); // WARNING: not sure about this (and it's late)
+    role_id = (b - k_blocks);  // WARNING: not sure about this (and it's late)
 }

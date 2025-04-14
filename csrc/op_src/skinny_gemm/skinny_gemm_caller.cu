@@ -1,8 +1,8 @@
 #include "./skinny_gemm_kernel.cu"
 
-#define COND_LAUCNH_ONE_SKINNY_GEMM(__al, __bl, __qs, __om, __ops)                                         \
-    else if (a_lanes == __al && b_lanes == __bl && qsize == __qs && op_m == __om && ops == __ops) {                     \
-        _skinny_gemm_kernel<__al, __bl, __qs, __om, __ops><<<grid, block, 0, stream>>>(                    \
+#define COND_LAUCNH_ONE_SKINNY_GEMM(__al, __bl, __qs, __om, __ops)                                   \
+    else if (a_lanes == __al && b_lanes == __bl && qsize == __qs && op_m == __om && ops == __ops) {  \
+        _skinny_gemm_kernel<__al, __bl, __qs, __om, __ops><<<grid, block, 0, stream>>>(              \
             A, B, D, scale_tensor, m, n, k, b_stride, split_k, A_producers, B_producers, consumers); \
     }
 
@@ -19,31 +19,16 @@ enum SkinnyGemmReturnCode {
 #define SKINNY_GEMM_FULL_COMPILE
 #ifdef SKINNY_GEMM_FULL_COMPILE
 int skinny_gemm(
-// Tensors
-    const fp8* __restrict__ A,
-    const fp8* __restrict__ B,
-    half* __restrict__ D,
-    const float* scale_tensor,
-// Shapes
-    const int m,
-    const int n,
-    const int k,
-    const int b_stride,
-    const int split_k,
-// Async non-templated
-    const int A_producers,
-    const int B_producers,
-    const int consumers,
-// Async templated
-    const int a_lanes,
-    const int b_lanes,
-    const int qsize,
-    const int op_m,
-    const int ops,
-// Cuda-related
-    hipStream_t stream
-) {
-
+    // Tensors
+    const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D, const float* scale_tensor,
+    // Shapes
+    const int m, const int n, const int k, const int b_stride, const int split_k,
+    // Async non-templated
+    const int A_producers, const int B_producers, const int consumers,
+    // Async templated
+    const int a_lanes, const int b_lanes, const int qsize, const int op_m, const int ops,
+    // Cuda-related
+    hipStream_t stream) {
     // Deduce other constants
     const int OP_K = 512 / op_m;
     const int WARPTILE_M = op_m;
@@ -84,7 +69,7 @@ int skinny_gemm(
     if (b_lanes == 0) {
         // This is a dummy if because the macro begins with an else if
         return SkinnyGemmReturnCode::INVALID_CONFIG;
-    } // TODO: remove some possibilities
+    }  // TODO: remove some possibilities
     COND_LAUCNH_ONE_SKINNY_GEMM(1, 1, 1, 8, 4)
     COND_LAUCNH_ONE_SKINNY_GEMM(1, 1, 1, 8, 8)
     COND_LAUCNH_ONE_SKINNY_GEMM(1, 1, 1, 16, 4)
@@ -475,10 +460,8 @@ int skinny_gemm(
 }
 #endif
 
-int skinny_gemm_fastpath(
-    const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D, const float* scale_tensor,
-    const int m, const int n, const int k
-) {
+int skinny_gemm_fastpath(const fp8* __restrict__ A, const fp8* __restrict__ B, half* __restrict__ D,
+                         const float* scale_tensor, const int m, const int n, const int k) {
     int b_stride = k;
     int split_k = SK_;
 
@@ -493,7 +476,6 @@ int skinny_gemm_fastpath(
     int ops = OPS_;
 
     hipStream_t stream = reinterpret_cast<hipStream_t>(0);
-
 
     // Deduce other constants
     const int OP_K = 512 / op_m;
