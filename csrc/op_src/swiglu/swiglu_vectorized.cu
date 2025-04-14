@@ -6,7 +6,7 @@
 #include <hipcub/hipcub.hpp>
 #include <hip/hip_fp8.h>
 
-#include "../../utils/macros.h"
+#include "utils/macros.h"
 
 __device__ void initialize_buffer_vectorized(half* __restrict__ next_buffer, int rows, int buffer_cols) {
     const int thread_id = blockIdx.x * blockDim.x + threadIdx.x;

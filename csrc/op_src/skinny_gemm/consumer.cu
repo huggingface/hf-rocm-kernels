@@ -1,4 +1,4 @@
-#include "core.cu"
+#include "./core.cu"
 
 void inline __device__ consumer_smem_to_reg8(fp8* buffer, fp8x8& reg) {
 // 32 bits load from the current bank

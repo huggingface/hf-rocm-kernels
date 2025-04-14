@@ -6,7 +6,7 @@
 #include <hipcub/hipcub.hpp>
 #include <hip/hip_fp8.h>
 
-#include "../../utils/macros.h"
+#include "utils/macros.h"
 
 template <typename T, bool clean_next_buffer>
 __global__ void _residual_rms_scalar(const half* __restrict__ input, half* __restrict__ residual,

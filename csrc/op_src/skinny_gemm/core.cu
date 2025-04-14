@@ -6,6 +6,7 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <hip/hip_fp8.h>
 #include <torch/all.h>
+
 using fp8 = __hip_fp8_storage_t;
 using fp8_4 = int;
 using fp8x8 = __attribute__((__vector_size__(8 * sizeof(fp8)))) fp8;

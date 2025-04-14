@@ -1,4 +1,4 @@
-#include "core.cu"
+#include "./core.cu"
 
 template <int A_PRODUCERS, int B_LANES, int QSIZE>
 void __device__ _tsr_A_producer(const fp8* __restrict__ src, fp8* buffer, int* queue, int& index, int& p_state,

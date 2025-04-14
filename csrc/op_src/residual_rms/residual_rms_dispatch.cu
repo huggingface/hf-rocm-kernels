@@ -2,8 +2,8 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <hip/hip_runtime.h>
 
-#include "residual_rms_vectorized.cu"
-#include "residual_rms_scalar.cu"
+#include "op_src/residual_rms/residual_rms_vectorized.cu"
+#include "op_src/residual_rms/residual_rms_scalar.cu"
 
 void residual_rms(torch::Tensor& input,         // Shape: [m, n] / Layout: row-major / Dtype: fp16
                   torch::Tensor& residual,      // Shape: [m, n] / Layout: row-major / Dtype: fp16

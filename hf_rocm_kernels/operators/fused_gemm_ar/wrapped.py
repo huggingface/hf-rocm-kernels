@@ -2,7 +2,7 @@ from typing import Optional
 import torch
 from torch import Tensor
 
-from .binding import _fused_gemm_ar
+from .binding import _all_reduce_init, _all_reduce
 
 
 def skinny_gemm_checks(
@@ -35,7 +35,19 @@ def skinny_gemm_checks(
     assert scale_tensor.device == device, f"Expected {scale_tensor.device = } to be the same as {device = }"
     assert output.device == device, f"Expected {output.device = } to be the same as {device = }"
 
+
+def fused_gemm_ar_init(
+    rank: int,
+    world_size: int,
+    port: int,
+    comms_a: Tensor,
+    comms_b: Tensor
+) -> int:
+    return _all_reduce_init(rank, world_size, port, comms_a, comms_b)
+
+
 def fused_gemm_ar(
+    allreduce_engine_ptr: int,
     skinny_a: Tensor,
     b: Tensor,
     scale_tensor: Tensor,
@@ -59,5 +71,5 @@ def fused_gemm_ar(
     split_k = 1 if split_k is None else split_k
     b_lanes = 3 if b_lanes is None else b_lanes
     assert b_lanes in [2, 3, 4, 5]
-    _fused_gemm_ar(skinny_a, b, scale_tensor, output, b_lanes, split_k)
+    _all_reduce(allreduce_engine_ptr, skinny_a, b, output, scale_tensor, b_lanes, split_k, False)
     return output

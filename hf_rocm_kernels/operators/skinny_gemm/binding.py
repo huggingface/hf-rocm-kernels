@@ -12,4 +12,5 @@ def _skinny_gemm(
     b_lanes: int,
     split_k: int,
 ) -> None:
-    torch.hfrk.skinny_gemm(A, B, D, scale_tensor, b_lanes, split_k)
+    print(torch.ops._HFRK_C)
+    torch.ops._HFRK_C.skinny_gemm(A, B, D, scale_tensor, b_lanes, split_k)

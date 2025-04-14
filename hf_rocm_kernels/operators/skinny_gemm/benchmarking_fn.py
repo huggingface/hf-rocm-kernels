@@ -1,6 +1,6 @@
 import torch
 from hf_rocm_kernels.utils.fp8 import fp8_quantize
-from hf_rocm_kernels.operators.fused_gemm_ar import fused_gemm_ar
+from hf_rocm_kernels.operators.skinny_gemm import skinny_gemm
 
 def benchmark_skinny_gemm(
     m: int,
@@ -40,7 +40,7 @@ def benchmark_skinny_gemm(
     # Otherwise, we are timing skinny_gemm
     else:
         def fn(i: int) -> None:
-            fused_gemm_ar(
+            skinny_gemm(
                 skinny_a=input,
                 b=q_weights[i],
                 scale_tensor=scales[i],

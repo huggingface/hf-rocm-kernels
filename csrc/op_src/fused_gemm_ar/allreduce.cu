@@ -209,11 +209,10 @@ torch::Tensor all_reduce(
     AllReduceEngine* allreduce_engine = reinterpret_cast<AllReduceEngine*>(allreduce_engine_ptr);
     return allreduce_engine->reduce(A, B, D, scale_tensor, b_lanes, split_k, is_capturing);
 }
-
 /*
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     py::class_<AllReduceEngine>(m, "AllReduceEngine")
         .def(py::init<int, int, int, torch::Tensor&, torch::Tensor&>())
         .def("reduce", &AllReduceEngine::reduce);
 }
-*/
+ */

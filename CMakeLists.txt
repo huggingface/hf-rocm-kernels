@@ -82,7 +82,6 @@ endif()
 # etc.
 #
 find_package(Torch REQUIRED)
-find_package(hip REQUIRED)
 
 #
 # Forward the non-CUDA device extensions to external CMake scripts.
@@ -171,13 +170,26 @@ set(KERNEL_SRC
   "csrc/op_src/fused_gemm_ar/allreduce.cu"
 )
 
+find_library(MSCCLPP_LIB NAMES mscclpp)
+list(APPEND LIBS ${MSCCLPP_LIB})
+
+message("${GPU_FLAGS}")
+set(COMPILE_FLAGS
+  ${GPU_FLAGS}
+  "-U__HIP_NO_HALF_CONVERSIONS__"
+  "-U__HIP_NO_HALF_OPERATORS__"
+)
+message("${COMPILE_FLAGS}")
+
+
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(
   _HFRK_C
   DESTINATION hf_rocm_kernels
   LANGUAGE ${GPU_LANG}
   SOURCES ${KERNEL_SRC}
-  COMPILE_FLAGS ${GPU_FLAGS}
+  LIBRARIES ${LIBS}
+  COMPILE_FLAGS ${COMPILE_FLAGS}
   ARCHITECTURES ${GPU_ARCHES}
   INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
   USE_SABI 3

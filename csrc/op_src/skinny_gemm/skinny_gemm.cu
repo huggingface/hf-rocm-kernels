@@ -1,5 +1,5 @@
-#include "consumer.cu"
-#include "producer.cu"
+#include "./consumer.cu"
+#include "./producer.cu"
 
 #define launch_tsr(BL, AP, BP, C, QS)                                                                                  \
     block.x = WARPSIZE * (AP + BP + C);                                                                                \

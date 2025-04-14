@@ -1,12 +1,15 @@
 import torch
+import torch.distributed as dist
 from hf_rocm_kernels.utils.fp8 import fp8_quantize
-from hf_rocm_kernels.operators.skinny_gemm import skinny_gemm
+from hf_rocm_kernels.operators.fused_gemm_ar import fused_gemm_ar, fused_gemm_ar_init
 
-def benchmark_skinny_gemm(
-    m: int, 
-    n: int, 
-    k: int, 
-    split_k: int, 
+
+def benchmark_fused_gemm_ar(
+    allreduce_engine_ptr: int,
+    m: int,
+    n: int,
+    k: int,
+    split_k: int,
     b_lanes: int,
     graph_size: int = 8,
     warmups: int = 32,
@@ -14,11 +17,11 @@ def benchmark_skinny_gemm(
     device: str = "cuda"
 ) -> float:
     # Create input
-    input = torch.normal(0, 1, size=(m, k), device=device, dtype=torch.float32)
+    input = torch.ones(size=(m, k), device=device, dtype=torch.float32).sub(0.99)
     input_scale = torch.mean(input)
     input = fp8_quantize(input, input_scale)[0]
     # Create weights
-    weights = [torch.normal(0, 1, size=(n, k), device=device, dtype=torch.float32) for _ in range(graph_size)]
+    weights = [torch.ones(size=(n, k), device=device, dtype=torch.float32).sub(0.99) for _ in range(graph_size)]
     scales = [torch.mean(weight) for weight in weights]
     q_weights = [fp8_quantize(weight, scale)[0].t() for weight, scale in zip(weights, scales)]
     # Prepare output
@@ -35,12 +38,14 @@ def benchmark_skinny_gemm(
                 out_dtype=torch.float16,
                 out=output
             )
-        # To initialize tunable ops
+            dist.all_reduce(output, op=dist.ReduceOp.SUM)
+        # To initialize tunable ops and torch allreduce
         fn(0)
     # Otherwise, we are timing skinny_gemm
     else:
         def fn(i: int) -> None:
-            skinny_gemm(
+            fused_gemm_ar(
+                allreduce_engine_ptr,
                 skinny_a=input,
                 b=q_weights[i],
                 scale_tensor=scales[i],
@@ -48,7 +53,7 @@ def benchmark_skinny_gemm(
                 b_lanes=b_lanes,
                 output=output
             )
-    
+
     # Create a side-stream to benchmark in
     stream = torch.cuda.Stream(device)
     with torch.cuda.stream(stream):
@@ -77,7 +82,7 @@ def benchmark_skinny_gemm(
             torch.cuda.synchronize()
             if i > warmups:
                 t += start_event.elapsed_time(end_event)
-        
+
     # Post-process time
     t *= 1000 / (iterations * graph_size)
     return t

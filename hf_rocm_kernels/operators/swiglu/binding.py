@@ -12,6 +12,6 @@ def _swiglu(
     num_threads: int,
     force_scalar: bool,
 ) -> None:
-    torch.hfrk.swiglu(
+    torch.ops._HFRK_C.swiglu(
         gate_up_proj, scale_tensor, swiglu_out, next_buffer, num_threads, force_scalar
     )
