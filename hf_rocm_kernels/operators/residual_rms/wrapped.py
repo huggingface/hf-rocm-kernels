@@ -9,9 +9,9 @@ _HIGHEST_RESIDUAL_RMS_MODE = 3
 
 
 def residual_rms_checks(
-    input: Tensor, 
-    residual: Tensor, 
-    weight: Tensor, 
+    input: Tensor,
+    residual: Tensor,
+    weight: Tensor,
     scale_tensor: Tensor,
     epsilon: float,
     next_buffer: Tensor,
@@ -37,10 +37,10 @@ def residual_rms_checks(
 
 
 def residual_rms_choose_mode(
-    input: Tensor, 
-    residual: Tensor, 
-    weight: Tensor, 
-    next_buffer: Tensor, 
+    input: Tensor,
+    residual: Tensor,
+    weight: Tensor,
+    next_buffer: Tensor,
     mode: int,
 ) -> int:
     cols_is_multiple_of_8 = (input.size(1) % 8 == 0) and (next_buffer.size(1) % 8 == 0)

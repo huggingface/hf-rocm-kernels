@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import argparse
 
 from hf_rocm_kernels.operators.swiglu import swiglu, generate_swiglu_data, reference_swiglu
 from hf_rocm_kernels.utils.benchmarking import Bench
@@ -7,41 +8,48 @@ from hf_rocm_kernels.utils.benchmarking import Bench
 if __name__ == "__main__":
 
     bench = Bench()
-    rows=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048]
-    hidden_dim=6656  # to imitate Llama3.1 405B in TP8
-    buffer_cols=0
+
+    # Retrieve arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 2048])
+    parser.add_argument("--intermediate-size", "-i", type=int, default=6656)
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    args = parser.parse_args()
+
+    rows = [r for r in args.rows]
+    intermediate_size = args.intermediate_size
+    buffer_cols = args.buffer_cols
 
     for row in tqdm(rows, "Gathering measures"):
-        gate_up_proj, scale_tensor, next_buffer = generate_swiglu_data(row, hidden_dim, buffer_cols, seed=0)
+        gate_up_proj, scale_tensor, next_buffer = generate_swiglu_data(row, intermediate_size, buffer_cols, seed=0)
         bench.add_measure(
             header="Torch (μs)", label=row, fn=lambda: reference_swiglu(gate_up_proj, scale_tensor, next_buffer)
         )
         bench.add_measure(
-            header="Scalarized (μs)", 
-            label=row, 
+            header="Scalarized (μs)",
+            label=row,
             fn=lambda: swiglu(gate_up_proj, scale_tensor, next_buffer, force_scalar=True)
         )
         bench.add_measure(
-            header="Vectorized (μs)", 
-            label=row, 
+            header="Vectorized (μs)",
+            label=row,
             fn=lambda: swiglu(gate_up_proj, scale_tensor, next_buffer, force_scalar=False)
         )
-    
-    print("-" * 40, f"hidden_dim = {hidden_dim} AND buffer_cols = {buffer_cols}", "-" * 40)
+
+    print("-" * 14, f"i_size = {intermediate_size} AND buffer_cols = {buffer_cols}", "-" * 13)
     bench.display_table(row_header="Nb. rows")
 
 
-# --------- hidden_dim = 6656 AND buffer_cols = 16384 ---------
-#   Nb. rows    Torch (μs)    VLLM (μs)    Ours (μs)    Speedup
-# ----------  ------------  -----------  -----------  ---------
-#          1       41.3421      3.73786      1.78521   2.0938
-#          2       32.1678      3.83803      1.87497   2.04699
-#          4       36.3197      3.92113      1.89572   2.06841
-#          8       25.0688      3.92996      1.93089   2.0353
-#         16       24.4134      3.98036      2.01746   1.97296
-#         32       26.8584      4.03421      2.22225   1.81537
-#         64       33.6491      4.11144      2.92414   1.40603
-#        128       44.9737      4.22152      4.42907   0.953139
-#        256       58.1091      4.75704      7.42158   0.640974
-#       1024      137.45       13.8092      25.6809    0.537724
-#       2048      272.996      25.9755      46.2979    0.561051
+# ------------- i_size = 6656 AND buffer_cols = 0 --------------
+#   Nb. rows    Torch (μs)    Scalarized (μs)    Vectorized (μs)
+# ----------  ------------  -----------------  -----------------
+#          1       42.7103            2.37437            2.09134
+#          2       32.606             2.45989            2.07332
+#          4       37.5817            2.46205            2.12491
+#          8       23.889             2.55379            2.15295
+#         16       23.9401            2.63905            2.04731
+#         32       26.4887            2.76049            2.1212
+#         64       33.3452            3.6288             2.27648
+#        128       43.3875            4.88383            2.79315
+#        256       54.6133            7.98832            3.80765
+#       2048      244.129            54.6449            19.9479

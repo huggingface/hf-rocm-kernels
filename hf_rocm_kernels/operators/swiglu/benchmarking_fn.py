@@ -28,7 +28,7 @@ def benchmark_swiglu(
     elif num_threads == -1:
         def fn(i: int) -> None:
             swiglu(inputs[i], scale_tensors[i], next_buffer=None, force_scalar=force_scalar, num_threads=num_threads)
-    
+
     # Create a side-stream to benchmark in
     stream = torch.cuda.Stream(device)
     with torch.cuda.stream(stream):
@@ -57,7 +57,7 @@ def benchmark_swiglu(
             torch.cuda.synchronize()
             if i > warmups:
                 t += start_event.elapsed_time(end_event)
-        
+
     # Post-process time
     t *= 1000 / (iterations * graph_size)
     return t

@@ -5,13 +5,13 @@ import hf_rocm_kernels._HFRK_C # noqa: F401
 
 
 def _residual_rms(
-    input: Tensor, 
-    residual: Tensor, 
-    weight: Tensor, 
-    scale_tensor: Tensor, 
-    epsilon: float, 
-    output: Tensor, 
-    next_buffer: Tensor, 
+    input: Tensor,
+    residual: Tensor,
+    weight: Tensor,
+    scale_tensor: Tensor,
+    epsilon: float,
+    output: Tensor,
+    next_buffer: Tensor,
     num_threads: int,
     force_scalar: bool,
 ) -> None:
