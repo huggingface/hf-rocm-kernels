@@ -5,7 +5,7 @@ from typing import Optional, List
 from torch import Tensor
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
-from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_cache
+from hf_rocm_kernels.utils.benchmarking import Bench
 
 try:
     import vllm._custom_ops as ops
