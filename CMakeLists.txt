@@ -169,13 +169,19 @@ set(KERNEL_SRC
   "csrc/op_src/skinny_gemm/skinny_gemm_binding.cu"
 )
 
+set(COMPILE_FLAGS
+  ${GPU_FLAGS}
+  "-U__HIP_NO_HALF_CONVERSIONS__"
+  "-U__HIP_NO_HALF_OPERATORS__"
+)
+
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(
   _HFRK_C
   DESTINATION hf_rocm_kernels
   LANGUAGE ${GPU_LANG}
   SOURCES ${KERNEL_SRC}
-  COMPILE_FLAGS ${GPU_FLAGS}
+  COMPILE_FLAGS ${COMPILE_FLAGS}
   ARCHITECTURES ${GPU_ARCHES}
   INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
   USE_SABI 3

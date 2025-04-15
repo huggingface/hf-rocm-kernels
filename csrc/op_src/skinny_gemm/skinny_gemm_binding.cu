@@ -3,8 +3,6 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <torch/all.h>
 
-#undef __HIP_NO_HALF_OPERATORS__
-#undef __HIP_NO_HALF_CONVERSIONS__
 #define SKINNY_GEMM_FULL_COMPILE
 
 // Main function
