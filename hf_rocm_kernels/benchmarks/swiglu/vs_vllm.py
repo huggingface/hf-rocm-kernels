@@ -12,7 +12,7 @@ try:
 except BaseException as e:
     if isinstance(e, ImportError):
         raise ModuleNotFoundError("It seems you don't have VLLM installed. Get it from: https://github.com/rocm/vllm")
-    else: 
+    else:
         raise NotImplementedError(
             "It seems you don't have the right version of VLLM installed. Get it from https://github.com/rocm/vllm"
         )

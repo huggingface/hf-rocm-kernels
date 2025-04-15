@@ -5,9 +5,9 @@ import hf_rocm_kernels._HFRK_C # noqa: F401
 
 
 def _swiglu(
-    gate_up_proj: Tensor, 
-    scale_tensor: Tensor, 
-    swiglu_out: Tensor, 
+    gate_up_proj: Tensor,
+    scale_tensor: Tensor,
+    swiglu_out: Tensor,
     next_buffer: Tensor,
     num_threads: int,
     force_scalar: bool,

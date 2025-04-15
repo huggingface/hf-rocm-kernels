@@ -75,7 +75,7 @@ def reference_rms(x: Tensor, eps: float) -> Tensor:
 def generate_residual_rms_data(
     rows: int, cols: int, buffer_cols: int = 0, dtype: torch.dtype = torch.float16, seed: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor, float, Optional[Tensor]]:
-    """Generates random inputs for the residual_rms operation. The generated input's shape is determined by (rows) and 
+    """Generates random inputs for the residual_rms operation. The generated input's shape is determined by (rows) and
     (cols), and one can pass a (seed) to ensure repeatability."""
     if seed is not None:
         torch.manual_seed(seed)

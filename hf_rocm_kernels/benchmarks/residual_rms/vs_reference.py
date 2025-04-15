@@ -16,18 +16,18 @@ if __name__ == "__main__":
     for rows in tqdm(list_rows, "Gathering measures"):
         args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
         bench.add_measure(
-            header="Ref (μs)", 
-            label=rows, 
+            header="Ref (μs)",
+            label=rows,
             fn=lambda: reference_residual_rms(*args),
         )
         bench.add_measure(
-            header="Pointwise (μs)", 
-            label=rows, 
+            header="Pointwise (μs)",
+            label=rows,
             fn=lambda: residual_rms(*args, force_scalar=True),
         )
         bench.add_measure(
-            header="Vectorized (μs)", 
-            label=rows, 
+            header="Vectorized (μs)",
+            label=rows,
             fn=lambda: residual_rms(*args, force_scalar=False),
         )
 

@@ -9,8 +9,8 @@ MAX_THREADS_PER_SM = 1024
 
 
 def swiglu_checks(
-    gate_up_proj: Tensor, 
-    scale_tensor: Tensor, 
+    gate_up_proj: Tensor,
+    scale_tensor: Tensor,
     next_buffer: Tensor,
 ) -> None:
     # Check shapes
@@ -53,7 +53,7 @@ def swiglu(
     force_scalar: bool = False,
     num_threads: int = -1,
 ) -> Tensor:
-    """Kernel that fuses a swiglu activation and a conversion to fp8. Can also initialize a buffer with as many rows as 
+    """Kernel that fuses a swiglu activation and a conversion to fp8. Can also initialize a buffer with as many rows as
     the input to zero.
     Args:
         - gate_up_proj: a fp16 tensor of shape (rows, cols) in row-major format
@@ -69,8 +69,8 @@ def swiglu(
     swiglu_checks(gate_up_proj, scale_tensor, next_buffer)
     num_threads = infer_num_threads(gate_up_proj.size(0), force_scalar, num_threads)
     swiglu_out = torch.empty(
-        size=(gate_up_proj.size(0), gate_up_proj.size(1) // 2), 
-        dtype=torch.float8_e4m3fnuz, 
+        size=(gate_up_proj.size(0), gate_up_proj.size(1) // 2),
+        dtype=torch.float8_e4m3fnuz,
         device=gate_up_proj.device,
     )
     _swiglu(
