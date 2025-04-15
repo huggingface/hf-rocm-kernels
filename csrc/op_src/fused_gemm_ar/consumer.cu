@@ -35,7 +35,7 @@ void inline __device__ consumer_smem_to_reg16(fp8* buffer, fp8x16& reg) {
 template <int CONSUMERS, int B_LANES, int QSIZE>
 void __device__ _tsr_consumer(fp8* A_buffer, fp8* B_buffer, half* D, float scale, int* queue, int& index, int& p_state,
                               int& role_id, const int n, const int dropped_rows, const int dropped_cols, const int k,
-                              const int k_blocks, half* scratch, int curr_n) {
+                              const int k_blocks, half* scratch) {
     // Compute thread position
     const int thread_id = threadIdx.x % WARPSIZE;
     A_buffer += (thread_id / 2) * E_P_BANK + (threadIdx.x % 2) * 32 * E_P_BANK * 2;
@@ -76,6 +76,7 @@ void __device__ _tsr_consumer(fp8* A_buffer, fp8* B_buffer, half* D, float scale
             consumer_smem_to_reg8(A_offs_buff + (op * OP_M * OP_K), reg_A[op]);
         }
         // Mark A buffer as consumed
+        asm volatile("s_waitcnt lgkmcnt(0)");
         queue[2 * B_LANES * index] = p_state + 1;
 
 // Go through each lanes
@@ -91,6 +92,7 @@ void __device__ _tsr_consumer(fp8* A_buffer, fp8* B_buffer, half* D, float scale
                 consumer_smem_to_reg16(B_offs_buff + (lane * OP_N * WARPTILE_K) + (op * OP_N * OP_K), reg_B[op]);
             }
             // Mark B buffer as consumed
+            asm volatile("s_waitcnt lgkmcnt(0)");
             queue[2 * (B_LANES * index + lane) + 1] = p_state + 1;
 
 // Consume registers
@@ -152,8 +154,8 @@ void __device__ _tsr_consumer(fp8* A_buffer, fp8* B_buffer, half* D, float scale
     __half2 x;
 #pragma unroll
     for (int i = 0; i < B_LANES; i++) {
-        x.x = __float2half_rn(reg_D[i][0]);
-        x.y = __float2half_rn(reg_D[i][1]);
+        x.x = reg_D[i][0];
+        x.y = reg_D[i][1];
         asm volatile("global_atomic_pk_add_f16 %0, %1, off\n\t" : : "v"(&D_[i * OP_N / 2]), "v"(x));
         asm volatile("global_atomic_pk_add_f16 %0, %1, off\n\t" : : "v"(&scratch_[i * OP_N / 2]), "v"(x));
     }

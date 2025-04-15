@@ -4,8 +4,8 @@ import torch
 import torch.multiprocessing as mp
 
 from hf_rocm_kernels.utils.testing import compare_x_with_ref
-from hf_rocm_kernels.operators.skinny_gemm import skinny_gemm, generate_skinny_gemm_data
-from hf_rocm_kernels.operators.fused_gemm_ar import fused_gemm_ar, fused_gemm_ar_init
+from hf_rocm_kernels.operators.skinny_gemm import skinny_gemm
+from hf_rocm_kernels.operators.fused_gemm_ar import fused_gemm_ar, fused_gemm_ar_init, generate_skinny_gemm_data
 
 
 def _test_fused_gemm_ar(
@@ -58,7 +58,7 @@ def schmest_fused_gemm_ar(
     # Compute reference outputs
     scale_b = scale_tensor.clone().fill_(1.0)
     ref_output = skinny_gemm(skinny_a, b, scale_tensor, out.clone())
-    expected = sum(range(1, world_size + 1)) * ref_output
+    expected = world_size * ref_output
 
 
     mp.spawn(

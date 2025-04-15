@@ -54,6 +54,8 @@ def fused_gemm_ar(
     output: Optional[Tensor] = None,
     split_k: Optional[int] = None,
     b_lanes: Optional[int] = None,
+    n_blocks: int = 12,
+    compute_warps: int = 12,
 ) -> Tensor:
     """Skinny GEMM kernel that leverages artifical sparsity.
     Args:
@@ -71,5 +73,5 @@ def fused_gemm_ar(
     split_k = 1 if split_k is None else split_k
     b_lanes = 3 if b_lanes is None else b_lanes
     assert b_lanes in [2, 3, 4, 5]
-    _all_reduce(allreduce_engine_ptr, skinny_a, b, output, scale_tensor, b_lanes, split_k, False)
+    _all_reduce(allreduce_engine_ptr, skinny_a, b, output, scale_tensor, b_lanes, split_k, n_blocks, compute_warps, False)
     return output

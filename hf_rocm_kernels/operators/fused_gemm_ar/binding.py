@@ -22,8 +22,10 @@ def _all_reduce(
     scale_tensor: Tensor,
     b_lanes: int,
     split_k: int,
+    n_blocks: int,
+    compute_warps: int,
     is_capturing: bool
 ) -> Tensor:
-    torch.ops._HFRK_C.all_reduce(allreduce_engine_ptr, A, B, D, scale_tensor, b_lanes, split_k, is_capturing)
+    torch.ops._HFRK_C.all_reduce(allreduce_engine_ptr, A, B, D, scale_tensor, b_lanes, split_k, n_blocks, compute_warps, is_capturing)
 
     return D

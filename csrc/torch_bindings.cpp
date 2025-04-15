@@ -63,7 +63,7 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
     ops.def("all_reduce_init(int rank, int worldSize, int port, Tensor comms_buff_A, Tensor comms_buff_B) -> int");
     ops.impl("all_reduce_init", torch::kCUDA, &all_reduce_init);
     // Calling
-    ops.def("all_reduce(int allreduce_engine_ptr, Tensor A, Tensor B, Tensor D, Tensor scale_tensor, int b_lanes, int split_k, bool is_capturing) -> Tensor");
+    ops.def("all_reduce(int allreduce_engine_ptr, Tensor A, Tensor B, Tensor D, Tensor scale_tensor, int b_lanes, int split_k, int n_blocks, int compute_warps, bool is_capturing) -> Tensor");
     ops.impl("all_reduce", torch::kCUDA, &all_reduce);
 }
 

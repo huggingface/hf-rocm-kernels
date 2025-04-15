@@ -28,4 +28,6 @@ torch::Tensor all_reduce(
     torch::Tensor& scale_tensor,
     int64_t b_lanes,
     int64_t split_k,
+    int64_t n_blocks,
+    int64_t compute_warps,
     bool is_capturing);

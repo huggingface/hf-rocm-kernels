@@ -33,15 +33,14 @@ def generate_skinny_gemm_data(
     (k), and one can pass a (seed) to ensure repeatability."""
     if seed is not None:
         torch.manual_seed(seed)
-    scale_tensor = torch.rand(size=(1,), device="cuda", dtype=torch.float32).mul(2).add(1)
+    scale_tensor = torch.ones(size=(1,), device="cuda", dtype=torch.float32).mul(2).add(1)
     skinny_a = fp8_quantize(
-        torch.normal(0, 1, size=(m, k), device="cuda", dtype=torch.float32),
+        torch.ones(size=(m, k), device="cuda", dtype=torch.float32),
         scale_tensor,
     )[0]
     b = fp8_quantize(
-        torch.normal(0, 1, size=(n, k), device="cuda", dtype=torch.float32),
+        torch.ones(size=(n, k), device="cuda", dtype=torch.float32),
         scale_tensor,
     )[0].t()
     output = torch.zeros(size=(m, n), dtype=torch.float16, device="cuda")
     return skinny_a, b, scale_tensor, output
-

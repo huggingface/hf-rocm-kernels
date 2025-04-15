@@ -1,6 +1,8 @@
 #pragma once
 
 #include <hip/hip_runtime.h>
+#include <iostream>
+
 #include <ATen/cuda/CUDAContext.h>
 #include <c10/cuda/CUDAGuard.h>
 #include <hip/hip_fp8.h>
@@ -50,6 +52,7 @@ using uint64 = unsigned long long;
 #define A_PRODUCERS_ 2
 #define B_PRODUCERS_ 6
 #define CONSUMERS_ 2
+#define COMMS_ 1
 
 #define QSIZE_ 2
 #define SK 1
