@@ -1,11 +1,8 @@
 #pragma once
 
 #include <hip/hip_runtime.h>
-#include <iostream>
-
-#include <ATen/cuda/CUDAContext.h>
-#include <c10/cuda/CUDAGuard.h>
 #include <hip/hip_fp8.h>
+#include <hip/hip_fp16.h>
 #include <torch/all.h>
 
 #define CUDATHROW(cmd)                                                                                                \
@@ -47,17 +44,25 @@ using uint64 = unsigned long long;
 #define WARPTILE_K (OP_K * OPS)
 
 // Parameters
-#define B_LANES_ 5
+#define A_LANES_ 2
+#define B_LANES_ 3
+#define QSIZE_ 3
+#define OP_M_ 16
+#define OPS_ 8
 
 #define A_PRODUCERS_ 2
 #define B_PRODUCERS_ 6
 #define CONSUMERS_ 2
 #define COMMS_ 1
 
-#define QSIZE_ 2
 #define SK 1
 
 // Macros
 #define K_BLOCKS(k, split_k) (((k / WARPTILE_K) / split_k))
-
 #define CDIV(a, b) ((a + b - 1) / (b))
+#define DB8TO32(x) (float)__hip_cvt_fp8_to_halfraw(x, __HIP_E4M3_FNUZ).data
+
+// Ids
+__device__ __forceinline__ int get_warp_id() { return threadIdx.x >> 6; }
+__device__ __forceinline__ int get_lane_id() { return threadIdx.x & 0x3f; }
+__device__ __forceinline__ int get_thread_id() { return threadIdx.x % WARPSIZE; }
