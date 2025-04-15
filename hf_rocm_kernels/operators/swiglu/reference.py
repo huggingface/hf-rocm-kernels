@@ -15,8 +15,8 @@ def reference_swiglu(
     if next_buffer is not None:
         assert next_buffer.dtype == torch.float16, f"Expected torch.float16 but got {next_buffer.dtype = }"
     # SwiGLU
-    gate_up_proj = gate_up_proj.view(-1, 2, gate_up_proj.size(1) // 2).float() 
-    # NOTE: In TGI, there is no .float(), but we do this to avoid repeat conversions in our kernel which would only 
+    gate_up_proj = gate_up_proj.view(-1, 2, gate_up_proj.size(1) // 2).float()
+    # NOTE: In TGI, there is no .float(), but we do this to avoid repeat conversions in our kernel which would only
     #       lessen the final precision
     swiglu_out = torch.nn.functional.silu(gate_up_proj[:, 0]) * gate_up_proj[:, 1]
     # Convert to fp8
@@ -31,7 +31,7 @@ def generate_swiglu_data(
     rows: int, hidden_dim: int, buffer_cols: int = 0, seed: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor, Optional[Tensor]]:
     """Generates random inputs for the swiglu operation. The generated input's shape is determined by (rows) and (cols),
-    and one can pass a (seed) to ensure repeatability. Also generates an empty buffer if (buffer_cols) is set to 
+    and one can pass a (seed) to ensure repeatability. Also generates an empty buffer if (buffer_cols) is set to
     non-zero."""
     if seed is not None:
         torch.manual_seed(seed)

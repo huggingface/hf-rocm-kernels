@@ -1,48 +1,61 @@
 from tqdm import tqdm
 import torch
+import argparse
 
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data, reference_residual_rms
 from hf_rocm_kernels.utils.benchmarking import Bench
 
 
+DTYPE = torch.float8_e4m3fnuz
+
+
 if __name__ == "__main__":
+
+    # Retrieve arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 2048])
+    parser.add_argument("--cols", "-c", type=int, default=16384)
+    parser.add_argument("--buffer-cols", "-b", type=int, default=0)
+    args = parser.parse_args()
+
+    rows = [r for r in args.rows]
+    cols = args.cols
+    buffer_cols = args.buffer_cols
+
+
+    # Bench RMS
     bench = Bench()
 
-    list_rows = [1, 2, 4, 8, 16, 32, 64, 128, 256, 2048]
-    cols = 16384
-    buffer_cols = 0
-    dtype = torch.float8_e4m3fnuz
-
-    for rows in tqdm(list_rows, "Gathering measures"):
-        args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
+    for rows in tqdm(rows, "Gathering measures"):
+        args = generate_residual_rms_data(rows, cols, buffer_cols, DTYPE)
         bench.add_measure(
-            header="Ref (μs)", 
-            label=rows, 
+            header="Ref (μs)",
+            label=rows,
             fn=lambda: reference_residual_rms(*args),
         )
         bench.add_measure(
-            header="Pointwise (μs)", 
-            label=rows, 
+            header="Pointwise (μs)",
+            label=rows,
             fn=lambda: residual_rms(*args, force_scalar=True),
         )
         bench.add_measure(
-            header="Vectorized (μs)", 
-            label=rows, 
+            header="Vectorized (μs)",
+            label=rows,
             fn=lambda: residual_rms(*args, force_scalar=False),
         )
 
     bench.display_table(row_header="Nb. rows")
 
 
-
-#   Nb. rows    Ref (μs)    Mode 0 (μs)    Mode 1 (μs)    Mode 2 (μs)    Mode 3 (μs)    Mode 4 (μs)
-# ----------  ----------  -------------  -------------  -------------  -------------  -------------
-#          1     39.6799        10.4178        5.69333        5.56819        4.79682        4.73507
-#          2     42.8523        10.5678        5.60803        5.6303         4.95249        4.82551
-#          4     43.4262        10.5658        5.74438        5.72863        4.96111        4.87793
-#          8     43.1202        10.6513        5.77915        5.75665        5.00844        4.89718
-#         16     46.4581        10.7354        5.85507        5.8458         5.08137        4.97483
-#         32     55.4413        10.9484        6.11379        6.09975        5.33902        5.2539
-#         64     78.0771        11.646         6.51273        6.54157        5.78304        5.74506
-#        128     97.0771        12.6915        7.14067        7.21665        6.52303        6.54999
-#        256    122.57          13.6316       11.9258        11.7987        11.0201        11.2677
+#   Nb. rows    Ref (μs)    Pointwise (μs)    Vectorized (μs)
+# ----------  ----------  ----------------  -----------------
+#          1     42.4464           11.2799            4.66131
+#          2     46.4053           11.3722            4.62339
+#          4     47.881            11.4576            4.6868
+#          8     47.928            11.5175            4.74966
+#         16     49.0487           11.626             4.81408
+#         32     57.6287           13.9424            5.03623
+#         64     78.5644           13.0868            5.67018
+#        128    101.934            14.1814            6.55099
+#        256    122.353            15.2455            9.46788
+#       2048    667.768            80.5618           65.8073

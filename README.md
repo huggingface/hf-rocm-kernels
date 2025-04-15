@@ -18,14 +18,14 @@ limitations under the License.
 Optimized ML kernels for ROCm devices.
 
 ## Installation
-Set the specific architecture you are running on with the `PYTORCH_ROCM_ARCH` environment variable.
-For example, for a MI300 GPU, you would set `PYTORCH_ROCM_ARCH=gfx942`.
-You can find a list of supported architectures [here](https://rocm.docs.amd.com/en/latest/reference/gpu-arch-specs.html).
+
+To install this package, you first need to find [your GPU's architecture](https://rocm.docs.amd.com/en/latest/reference/gpu-arch-specs.html). For instance, __if you are using a MI300 GPU, your architecture would be `gfx942`__. This package has only been tested on the `gfx942` architecture.  
+Then specify the architecture you are running on when calling `install.sh`: this will set the `PYTORCH_ROCM_ARCH` environment variable and install the project.
 
 ```bash
-pip install uv
-uv sync
-```
+./install.sh gfx942
+````
+
 
 ## Adding a new operator
 

@@ -74,10 +74,11 @@ class Bench:
         self.check_device_is_free(warn_if_not=True)
         self._measures = {}
 
-    def enter_benchmark_mode(self) -> None:
+    @classmethod
+    def enter_benchmark_mode(cls, enable_tunable: bool = True) -> None:
         """Turns off gradient and activates TunableOps to get maximum performances."""
         torch.set_grad_enabled(False)
-        torch.cuda.tunable.enable(val=True)
+        torch.cuda.tunable.enable(val=enable_tunable)
 
     def check_device_is_free(self, warn_if_not: bool = False) -> Dict[str, int]:
         """Checks whether or not the GPU is free and returns the relevant metrics."""

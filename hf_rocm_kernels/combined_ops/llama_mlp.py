@@ -18,7 +18,7 @@ def llama_mlp_combined_ops(
     gate_up_gemm_hp: Tuple[Optional[int], Optional[int]] = (None, None),
     down_gemm_hp: Tuple[Optional[int], Optional[int]] = (None, None),
 ) -> Tuple[Tensor, Tensor]:
-    
+
     # RMS norm
     gate_up_proj = torch.empty(
         size=(attn_output.size(0), gate_up_weight.size(1)), dtype=torch.float16, device=attn_output.device
