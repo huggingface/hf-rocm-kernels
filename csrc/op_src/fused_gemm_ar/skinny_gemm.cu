@@ -1,5 +1,6 @@
 #include "consumer.cu"
 #include "producer.cu"
+//#include "producers/producers.cuh"
 #include <mscclpp/concurrency_device.hpp>
 
 
@@ -18,9 +19,18 @@ __global__ void vectorized_reduce_inplace(__half* __restrict__ D, __half* __rest
 
     // Figure out peer channels for comms
     int peerSendRank = (rank + 1) % world_size;
-    int peerRecvRank = (rank - 1 + world_size) % world_size;
+    int peerRecvRank = (rank + world_size - 1) % world_size;
     int peerSendId = peerSendRank < rank ? peerSendRank : peerSendRank - 1;
     int peerRecvId = peerRecvRank < rank ? peerRecvRank : peerRecvRank - 1;
+    //printf("rank: %d, peerSendId: %d, peerRecvId: %d\n", rank, peerSendId, peerRecvId);
+    // rank: 0, peerSendId: 0, peerRecvId: 6
+    // rank: 1, peerSendId: 1, peerRecvId: 0
+    // rank: 2, peerSendId: 2, peerRecvId: 1
+    // rank: 3, peerSendId: 3, peerRecvId: 2
+    // rank: 4, peerSendId: 4, peerRecvId: 3
+    // rank: 5, peerSendId: 5, peerRecvId: 4
+    // rank: 6, peerSendId: 6, peerRecvId: 5
+    // rank: 7, peerSendId: 0, peerRecvId: 6
 
     DeviceHandle<mscclpp::PortChannel>& left_a = constRingChannelsA[peerRecvId];
     DeviceHandle<mscclpp::PortChannel>& right_a = constRingChannelsA[peerSendId];
@@ -84,10 +94,10 @@ __global__ void vectorized_reduce_inplace(__half* __restrict__ D, __half* __rest
         deviceSyncer.sync(gridDim.x, -1);
      }
 
-     // Reset buffer A to ensure we do not accumulate between allreduce runs
-     for (int i = idx * 2; i < size; i += stride * 2) {
-         reinterpret_cast<int32_t*>(buff_a)[i / 2] = 0;
-     }
+    // Reset buffer A to ensure we do not accumulate between allreduce runs
+    //for (int i = idx * 2; i < size; i += stride * 2) {
+    //    reinterpret_cast<int32_t*>(buff_a)[i / 2] = 0;
+    //}
 }
 
 #define launch_tsr(BL, AP, BP, C, QS)                                                                        \
@@ -197,7 +207,6 @@ void __global__ _tsr_kernel(const fp8* __restrict__ A, const fp8* __restrict__ B
             right.flush();
             left.wait();
         }
-        //printf("Rank %d: Received data from %d\n", rank, peerRecvRank);
     }
     deviceSyncer.sync(gridDim.x, -1);
 }
@@ -261,9 +270,5 @@ void skinny_gemm(torch::Tensor& A, torch::Tensor& B, torch::Tensor& D, torch::Te
 
     int threads = 256;
     int blocks = (D.numel() / 2 + threads - 1) / threads;
-    //printf("Allreduce: sizes: %d %d %d %d %d %d\n", D.numel(), m, n, k, m*n, m*n*2);
     vectorized_reduce_inplace<<<blocks, threads, 0, stream>>>(D_, buff_a_, buff_b_, D.numel(), rank, world_size, is_capturing);
-    //cudaEventRecord(lock, stream);
-    //cudaStreamSynchronize(stream);
-    //cudaDeviceSynchronize();
 }

@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-# import hf_rocm_kernels._HFRK_C # noqa: F401
+import hf_rocm_kernels._HFRK_C  # noqa: F401
 
 
 def _swiglu(
