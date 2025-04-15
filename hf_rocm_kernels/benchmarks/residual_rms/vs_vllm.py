@@ -21,32 +21,31 @@ except BaseException as e:
 
 
 def vllm_residual_rms(
-    input: Tensor,
-    residual: Tensor,
-    weights: Tensor,
-    epsilon: float,
-    scale_tensor: Optional[Tensor],
+    input: Tensor, residual: Tensor, weights: Tensor, epsilon: float, scale_tensor: Optional[Tensor]
 ) -> Tensor:
     # Case: fp16
     if scale_tensor is None:
         ops.fused_add_rms_norm(input, residual, weights, epsilon)
-        out = input
+        return input
     # Case: fp8
-    else:
-        out = torch.empty_like(input, dtype=torch.float8_e4m3fnuz)
-        ops.scaled_fused_add_rms_norm(out, input, residual, weights, scale_tensor, epsilon)
+    out = torch.empty_like(input, dtype=torch.float8_e4m3fnuz)
+    ops.scaled_fused_add_rms_norm(out, input, residual, weights, scale_tensor, epsilon)
     return out
 
 
 def get_vllm_time(bench: Bench, rows: int, cols: int, buffer_cols: int, dtype: torch.dtype) -> float:
     args = generate_residual_rms_data(rows, cols, buffer_cols, dtype)[:-1]
-    return benchmark_cuda_graph_no_cache(vllm_residual_rms, args, {})
+    t = bench.benchmark_fn(fn=lambda: vllm_residual_rms(*args))
+    # t = benchmark_cuda_graph_no_cache(vllm_residual_rms, args, {})
+    return t
 
 
 def run_benchmark(rows: List[int], cols: int, buffer_cols: int, dtype: torch.dtype) -> None:
     bench = Bench()
     for rows in tqdm(rows, "Gathering measures"):
-        input, residual, weights, epsilon, scale_tensor, next_buffer = generate_residual_rms_data(rows, cols, buffer_cols, dtype)
+        (input, residual, weights, epsilon, scale_tensor, next_buffer) = generate_residual_rms_data(
+            rows, cols, buffer_cols, dtype
+        )
         bench.add_measure(
             header="Torch (μs)",
             label=rows,
