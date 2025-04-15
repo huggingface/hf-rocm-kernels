@@ -9,10 +9,8 @@ from shutil import which
 from typing import Dict
 
 import torch
-from packaging.version import Version, parse
 from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
-from torch.utils.cpp_extension import CUDA_HOME
 
 
 def load_module_from_path(module_name, path):
