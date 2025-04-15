@@ -5,10 +5,9 @@ authors = []
 license = { text = "Apache 2.0" }
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -22,17 +21,18 @@ classifiers = [
 ]
 
 dependencies = [
-    "amdsmi>=6.2.0",
     "numpy<2.0.0",
     "torch>=2.5.0",
-    "pytorch-triton-rocm>=3.0.0",
+    "matplotlib>=3.7.0",
+    "tabulate>=0.9.0",
 ]
 
 [build-system]
 requires = [
-    "cmake>=3.26",
+    "cmake==3.31.4",
     "numpy<2.0.0",
     "setuptools>=61",
+    "setuptools-scm>=8",
     "torch>=2.5.0",
     "pytorch-triton-rocm>=3.0.0",
 ]
@@ -42,12 +42,10 @@ dev = [
     "clang-format>=19.0.0",
     "pytest>=8.3.3",
     "ruff>=0.8.0",
-    "matplotlib>=3.7.0",
 ]
 
 [tool.uv.sources]
 torch = { index = "pytorch-rocm" }
-torchvision = { index = "pytorch-rocm" }
 pytorch-triton-rocm = { index = "pytorch-rocm" }
 
 

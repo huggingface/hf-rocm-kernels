@@ -42,8 +42,6 @@ if not sys.platform.startswith("linux"):
     )
     TARGET_DEVICE = "empty"
 
-MAIN_CUDA_VERSION = "12.1"
-
 
 def is_ninja_available() -> bool:
     return which("ninja") is not None
@@ -246,42 +244,6 @@ def get_hipcc_rocm_version():
     else:
         print("Could not find HIP version in the output")
         return None
-
-
-def get_neuronxcc_version():
-    import sysconfig
-
-    site_dir = sysconfig.get_paths()["purelib"]
-    version_file = os.path.join(site_dir, "neuronxcc", "version", "__init__.py")
-
-    # Check if the command was executed successfully
-    with open(version_file, "rt") as fp:
-        content = fp.read()
-
-    # Extract the version using a regular expression
-    match = re.search(r"__version__ = '(\S+)'", content)
-    if match:
-        # Return the version string
-        return match.group(1)
-    else:
-        raise RuntimeError("Could not find Neuron version in the output")
-
-
-def get_nvcc_cuda_version() -> Version:
-    """Get the CUDA version from nvcc.
-
-    Adapted from https://github.com/NVIDIA/apex/blob/8b7a1ff183741dd8f9b87e7bafd04cfde99cea28/setup.py
-    """
-    assert CUDA_HOME is not None, "CUDA_HOME is not set"
-    nvcc_output = subprocess.check_output([CUDA_HOME + "/bin/nvcc", "-V"], universal_newlines=True)
-    output = nvcc_output.split()
-    release_idx = output.index("release") + 1
-    nvcc_cuda_version = parse(output[release_idx].split(",")[0])
-    return nvcc_cuda_version
-
-
-def get_path(*filepath) -> str:
-    return os.path.join(ROOT_DIR, *filepath)
 
 
 ### SCRIPT #############################################################################################################
