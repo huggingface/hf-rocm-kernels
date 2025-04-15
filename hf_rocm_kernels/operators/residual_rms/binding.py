@@ -14,10 +14,6 @@ def _residual_rms(
     num_threads: int,
     force_scalar: bool,
 ) -> None:
-    print(torch.ops._HFRK_C)
-    print(dir(torch.ops._HFRK_C))
-    print(dir(hf_rocm_kernels))
-    print(dir(hf_rocm_kernels._HFRK_C))
     torch.ops._HFRK_C.residual_rms(
         input, residual, weight, scale_tensor, epsilon, output, next_buffer, num_threads, force_scalar
     )
