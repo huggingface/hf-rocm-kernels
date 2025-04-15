@@ -3,8 +3,10 @@
 #include <c10/cuda/CUDAGuard.h>
 #include <torch/all.h>
 
+// Needed in case compiler fails half conversion or operations. Should be taken care of by CMake.
 #undef __HIP_NO_HALF_OPERATORS__
 #undef __HIP_NO_HALF_CONVERSIONS__
+
 #define SKINNY_GEMM_FULL_COMPILE
 
 // Main function

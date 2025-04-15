@@ -31,10 +31,7 @@ install(CODE "set(CMAKE_INSTALL_LOCAL_ONLY TRUE)" ALL_COMPONENTS)
 # Supported python versions.  These versions will be searched in order, the
 # first match will be selected.  These should be kept in sync with setup.py.
 #
-set(PYTHON_SUPPORTED_VERSIONS "3.8" "3.9" "3.10" "3.11" "3.12")
-
-# Supported NVIDIA architectures.
-set(CUDA_SUPPORTED_ARCHS "7.0;7.5;8.0;8.6;8.9;9.0")
+set(PYTHON_SUPPORTED_VERSIONS "3.9" "3.10" "3.11" "3.12")
 
 # Supported AMD GPU architectures.
 set(HIP_SUPPORTED_ARCHS "gfx942")
@@ -169,13 +166,19 @@ set(KERNEL_SRC
   "csrc/op_src/skinny_gemm/skinny_gemm_binding.cu"
 )
 
+set(COMPILE_FLAGS
+  ${GPU_FLAGS}
+  "-U__HIP_NO_HALF_CONVERSIONS__"
+  "-U__HIP_NO_HALF_OPERATORS__"
+)
+
 message(STATUS "Enabling C extension.")
 define_gpu_extension_target(
   _HFRK_C
   DESTINATION hf_rocm_kernels
   LANGUAGE ${GPU_LANG}
   SOURCES ${KERNEL_SRC}
-  COMPILE_FLAGS ${GPU_FLAGS}
+  COMPILE_FLAGS ${COMPILE_FLAGS}
   ARCHITECTURES ${GPU_ARCHES}
   INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
   USE_SABI 3
