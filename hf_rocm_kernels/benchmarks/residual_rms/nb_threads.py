@@ -5,7 +5,7 @@ import matplotlib.cm as cm
 import argparse
 from typing import List
 from hf_rocm_kernels.operators.residual_rms import residual_rms, generate_residual_rms_data
-from hf_rocm_kernels.utils.benchmarking import Bench, benchmark_cuda_graph_no_cache
+from hf_rocm_kernels.utils.benchmarking import Bench
 
 try:
     from hf_rocm_kernels.benchmarks.residual_rms.vs_vllm import get_vllm_time

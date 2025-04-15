@@ -46,6 +46,7 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--rows", "-r", nargs="+", type=int, default=[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024, 2048])
+    parser.add_argument("--intermediate-size", "-i", type=int, default=6656) # to imitate Llama3.1 405B in TP8
     parser.add_argument("--buffer-cols", "-b", type=int, default=0)
     parser.add_argument("--multiplier", "-m", type=int, default=1)
     args = parser.parse_args()
@@ -55,6 +56,6 @@ if __name__ == "__main__":
     # Only benchmark fp8 version
     run_benchmark(
         rows=rows,
-        hidden_dim=6656,  # to imitate Llama3.1 405B in TP8
+        intermediate_size=args.intermediate_size,
         buffer_cols=args.buffer_cols,
     )
