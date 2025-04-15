@@ -12,6 +12,7 @@ tunableop_results*
 
 # Misc. files
 *.png
+*.json
 
 # IDE files
 *.code-workspace
