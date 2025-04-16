@@ -90,3 +90,8 @@ Ideally, we then create a user-friendly version of the operator with checks (eg.
 ### Side notes
 
 (*) When passing scalar arguments to an operator, use types `int64_t` (corresponds to python `int`) and `double` (python `float`) for the C operator.
+
+
+### VLLM Integration
+
+The HF ROCm kernels are integrated into VLLM. For detailed instructions and usage information, see the [HFRK integration README](https://github.com/remi-or/vllm/blob/patch_hfrk/HFRK_readme.md).
