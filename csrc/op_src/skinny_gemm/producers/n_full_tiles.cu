@@ -35,7 +35,7 @@ produce_n_full_tiles(const fp8* __restrict__ source, fp8* buffer, const int prod
     dropped_ad += curr_ad;
 
     // Relocate thread in source
-    source += curr_ad * stride_ad;
+    source += (dropped_ad >= OP_AD * LANES) ? 0 : (curr_ad * stride_ad);
     source += curr_ld;
 
     // Relocate thread in buffer

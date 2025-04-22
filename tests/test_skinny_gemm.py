@@ -21,7 +21,7 @@ def _test_skinny_gemm(m: int, n: int, k: int, verbose: bool) -> Tuple[float, flo
 @pytest.mark.parametrize("repeat_id", "abcde")
 @pytest.mark.parametrize("k", [256, 1024, 16384])
 @pytest.mark.parametrize("n", [128, 1024, 6656, 13312])
-@pytest.mark.parametrize("m", [1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 16, 32])
+@pytest.mark.parametrize("m", [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 16, 17, 32])
 def test_skinny_gemm(
     m: int,
     n: int,
