@@ -71,7 +71,7 @@ ops.impl("increment", torch::kCUDA, &increment);
 
 Notice the `!` after the `Tensor` type: this means that the tensor `x` is modified by the operator we just declared. When passing a tensor that is not modified by the operator, you can drop the `!`.
 
-Finaly, we add the python-side of the binding. We create the directory `increment` in `hf_rocm_kernels/operators` and in it the file `binding.py` containing:
+Finally, we add the python-side of the binding. We create the directory `increment` in `hf_rocm_kernels/operators` and in it the file `binding.py` containing:
 
 ```
 import torch
