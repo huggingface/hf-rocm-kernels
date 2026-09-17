@@ -5,8 +5,12 @@ on:
   pull_request:
     types: [opened, labeled, reopened, synchronize]
 
+permissions: {}
+
 jobs:
   lint:
+    permissions:
+      contents: read
     name: Lint
     runs-on: ubuntu-latest
     steps:
